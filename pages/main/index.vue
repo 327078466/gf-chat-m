@@ -1,0 +1,707 @@
+<template>
+	<!-- 跳过审核 用于专门给审核人员看 -->
+	<view>
+		<view v-if="!isDevelop">
+			<view class="login-content">
+				<view class="login-title">
+					文件查询
+				</view>
+				<view class="iphone">
+					<input type="text" placeholder="输入文件名" />
+					<uni-icons type="closeempty" color="#808080" size="25"></uni-icons>
+				</view>
+
+				<view class="password">
+					<input placeholder="请输入文件路径" />
+					<uni-icons type="eye-filled" color="#808080" size="25"></uni-icons>
+				</view>
+				<view class="test">
+					<input type="text" placeholder="输入关键词" />
+					<view class="get-test" type="default">获取</view>
+				</view>
+				<button class="mybutton" @click="showMessage">点击我</button>
+			</view>
+		</view>
+		<view v-if="isDevelop">
+			<cu-custom bgColor="bg-cyan" :isBack="false">
+				<!-- 	<block slot="backText">返回</block> -->
+				<block slot="content">金鱼能聊天</block>
+			</cu-custom>
+			<view class="cu-chat">
+				<block v-for="(x,i) in msgList" :key="i">
+					<!-- 用户消息 -->
+					<view v-if="x.my && x.type === 'msg'" class="cu-item self"
+						:class="[i === 0 ? 'first' : '', i === 1 ? 'sec' : '']">
+						<view class="main">
+							<view class="content bg-cyan shadow" :class="{ 'hidden-pseudo-element': !isPseudoElementVisible }" @click="x.msg && $squni.copy(x.msg)">
+								<text>{{ x.msg }}</text>
+							</view>
+						</view>
+						<image class="cu-avatar round" :src="'../../static/answer.png'">
+							<view v-if="i === 0" class="date">{{ x.date }}</view>
+					</view>
+					<!-- AI消息 -->
+					<view v-if="!x.my && x.type === 'msg'" class="cu-item"
+						:class="[i === 0 ? 'first' : '', i === 1 ? 'sec' : '']">
+						<view class="flex flex-direction align-center">
+							<image class="cu-avatar round chat-avatar"
+								:src="mode == '1' ? '../../static/M1.png' : mode == '2' ? '../../static/M2.png':'../../static/M3.png'">
+								<text v-if="i === 0" class="cuIcon-title" :class="[statusColor]"></text>
+						</view>
+						<view class="main" style="display: flex;flex-direction: row;" >
+							<view class="content shadow" @click="x.msg && $squni.copy(x.msg)" :class="{ 'hidden-pseudo-element': !isPseudoElementVisible }">
+								<text>{{ x.msg }}</text>
+							</view>
+						</view>
+						<view @click="open" v-if="i === 0">
+							<image src="../../static/mode.png"
+								style="height: 20px;width: 20px; vertical-align: middle; "></image>
+							<text class="text-blue" style="line-height: 100upx;">模式</text>
+						</view>
+						<view v-if="i === 0" class="date">{{ x.date }}</view>
+					</view>
+					<view v-if="x.type === 'error'" class="cu-info">
+						<text class="cuIcon-roundclosefill text-red "></text> {{ x.msg }}
+					</view>
+				</block>
+
+				<view v-if="msgLoading" class="cu-item">
+					<view class="flex flex-direction align-center">
+						<image class="cu-avatar round chat-avatar" src="/static/manager.png">
+					</view>
+					<view class="main">
+						<text class="cuIcon-loading2 cuIconfont-spin text-cyan"></text>
+					</view>
+				</view>
+			</view>
+
+			<view class="cu-bar foot input box" :style="[{bottom:(inputBottom)+'px'}]">
+				<view class="box1 fcbox">
+					<view class="myview" @click="clearChat">
+						<image src="../../static/clear.png" class="myimage"></image>
+						<text class="text-blue" style="font-size: 10px;">清除</text>
+					</view>
+					<view class="myview" @click="$squni.navigateTo('/pages/main/history')">
+						<image src="../../static/history.png" class="myimage"></image>
+						<text class="text-blue" style="font-size: 10px;">历史</text>
+					</view>
+					<view class="myview" @click="$squni.navigateTo('/pages/main/assistant')">
+						<image src="../../static/assistant.png" class="myimage"></image>
+						<text class="text-blue" style="font-size: 10px;">角色</text>
+					</view>
+				</view>
+				<view class="box1">
+					<view class="" @click="openBottomFunc">
+						<text class="cuIcon-list text-cyan" style="font-size: 60upx;"></text>
+					</view>
+					<input v-model="msg" class="solid padding-lr" :adjust-position="false" :focus="false"
+						maxlength="1000" cursor-spacing="10" :placeholder="loading ? '正在思考中，请稍后~' : '您有什么问题，问什么都可以'"
+						@focus="inputFocus" @blur="inputBlur" @confirm="sendMsg" ></input>
+					<!-- <view class="action">
+							<text class="cuIcon-emojifill text-grey"></text>
+						</view> -->
+					<button class="cu-btn bg-cyan shadow" :disabled="loading" @click="sendMsg">
+						<text class="cuIcon-loading2 cuIconfont-spin"
+							v-if="loading || !ready"></text>{{ !ready ? '连接中' : '发送' }}
+					</button>
+				</view>
+			</view>
+
+			<bottom-func v-if="bottomFuncShow" ref="bottomFunc" :chatAsset="chatAsset"></bottom-func>
+			<uni-popup ref="popup" type="center">
+				<uni-popup-dialog mode="base" title="模式越高回答的内容越有参考意义哦～" :duration="2000" :before-close="true" @close="close"
+					@confirm="confirm(mode)">
+					<view style="background-color: #fff;padding: 15px;" class="box">
+						<radio-group @change="radioChange">
+							<view class="box2">
+								<text>小鱼助理</text>
+								<radio :value="1" :checked="mode=='1'"></radio>
+							</view>
+							<view class="box2">
+								<text>高级助理</text>
+								<radio :value="2" :checked="mode=='2'"></radio>
+							</view>
+							<view class="box2">
+								<text>私人助理</text>
+								<radio :value="3" :checked="mode=='3'"></radio>
+							</view>
+						</radio-group>
+					</view>
+				</uni-popup-dialog>
+			</uni-popup>
+		</view>
+	</view>
+
+
+
+</template>
+
+<script>
+	import {
+		dateFormat,
+		interval
+	} from '@/util/squ.js'
+	import {
+		scrollToBottom
+	} from '@/util/squni.js'
+	import websocket from '@/util/websocket'
+	import {
+		sendMsgApi,
+		getUserChatAssetApi
+	} from '@/api/chat.js'
+	import BottomFunc from './bottom-func'
+	const HELLO_MSG = {
+		type: 'msg',
+		my: false,
+		msg: '连接中，请稍后~',
+		date: dateFormat(new Date(), 'yyyy年MM月dd日 hh:mm')
+	}
+	export default {
+		components: {
+			BottomFunc
+		},
+		data() {
+			return {
+				loading: false,
+				userId: this.$store.getters.userId,
+				msgList: [HELLO_MSG],
+				msgContent: "",
+				msg: "",
+				inputBottom: 0,
+				bottomFuncShow: false,
+				chatAsset: {},
+				assetType: 'n',
+				statusColor: 'text-red',
+				statusTimer: null,
+				msgLoading: false,
+				isDevelop: 'true',
+				type: 'top',
+				mode: "1",
+				assistantName: '小鱼助理',
+				assistantDetail: {'id':'0'},
+			}
+		},
+		computed: {
+			ready() {
+				return this.statusColor === 'text-green'
+			}
+		},
+		beforeMount() {
+			this.isDevelop = this.globalData.IsDevelop // 访问全局变量
+		},
+		watch: {
+			loading(n, o) {
+				if (n !== o && !n) {
+					let last = this.msgList[this.msgList.length - 1]
+					if (!last.my) {
+						this.addHistory(last)
+					}
+				}
+			},
+			statusColor(n, o) {
+				this.mode = this.$squni.getStorageSync('mode')
+				if (n === 'text-green') {
+					if (this.mode == '1') {
+						this.assistantName = '小鱼助理'
+					} else if (this.mode == '2') {
+						this.assistantName = '高级助理'
+					} else if (this.mode == '3') {
+						this.assistantName = '私人助理'
+					}
+					if (this.assistantDetail.id == '0') {
+						HELLO_MSG.msg = '我是您的' + this.assistantName + ',可以帮您解答疑难困惑'
+					} else {
+						HELLO_MSG.msg = '我是您的' + this.assistantName + ',可以帮您解答疑难困惑' + '[提示词:' + this.assistantDetail.name + ']'
+					}
+				} else {
+					HELLO_MSG.msg = '连接中，请稍后~'
+				}
+			}
+		},
+		async onShow() {
+			this.heartStatus()
+			await this.$ready
+			this.mode = this.$squni.getStorageSync('mode')
+			if (!this.mode) { // 有值
+				this.mode = '1'
+				this.$squni.setStorageSync('mode', '1');
+			}
+			if (!this.userId) {
+				this.$squni.toast('请先进行登录哦')
+				return
+			}
+			getUserChatAssetApi().then(res => {
+				this.chatAsset = res.data
+			})
+
+			console.log("开始连接" + this.assistantDetail.id)
+			try {
+				//建立socket连接
+				websocket.connectSocket(this.$config.wssUrl + '/tools/chat/user/' + this.userId + '/' + this.mode + '/' + this.assistantDetail.id,
+					msg => {
+						this.recvMsg(msg)
+					}, () => {
+						//如果连接成功则发送心跳检测
+						//this.heartBeatTest()
+					})
+			} catch (error) {
+				console.log('websocket connectSocket error:' + error)
+			}
+		},
+		onHide() {
+			websocket.closeSocket()
+			clearInterval(this.statusTimer)
+		},
+		onLoad(option) { //option为object类型，会序列化上个页面传递的参数
+			if (option && option.data) {
+				const data = JSON.parse(decodeURIComponent(option.data));
+				this.assistantDetail = data;
+			}
+		},
+
+		methods: {
+			sendMsg() {
+				if (this.msg == "") {
+					this.$squni.toast('请先输入您的问题哦')
+					return
+				}
+				let msg = this.msg
+				this.putMsg(this.msg, true)
+				this.msgLoading = true
+				this.loading = true
+
+				// ======== 开发环境模拟回复 ========
+				//return this.mockReply()
+				// ======== 开发环境模拟回复 ========
+
+				if (this.calcAsset() === false) {
+					this.loading = false
+					return
+				}
+				// 发送消息
+				websocket.sendMessage(msg, null, () => {
+					this.putMsgError('机器人被拔网线了，请稍后再试~')
+				})
+			},
+			recvMsg(msg) {
+				this.msgLoading = false
+				if (!msg) {
+					this.putMsgError('机器人开小差了，请稍后再试~')
+					return
+				}
+				// 发送消息
+				// 1+1
+				// 收到消息
+				// {"role":"assistant","content":null}
+				// {"role":null,"content":"2"}
+				// {"role":null,"content":null}
+				// [DONE]
+				if (msg === '[DONE]') {
+					this.loading = false
+				} else {
+					try {
+						let msgJson = JSON.parse(msg)
+						if (msgJson.role === 'sqchat') {
+							let content = msgJson.content
+							if (msgJson.codeKey) {
+								content += `[${msgJson.codeKey}]`
+								if (msgJson.codeKey === 'chat.asset_short') {
+									this.openBottomFunc()
+								} else if (msgJson.codeKey.indexOf('chat.asset_') >= 0) {
+									this.chatAsset[this.assetType]++
+								}
+							}
+							this.putMsgError(content)
+						}
+						if (msgJson.role === 'assistant') {
+							this.putMsg('', false)
+						} else if (msgJson.role == null && msgJson.content) {
+							this.msgList[this.msgList.length - 1].msg += msgJson.content
+							scrollToBottom()
+						}
+					} catch (error) {
+						this.putMsgError(msg)
+					}
+				}
+			},
+			sendMsgBak() {
+				let that = this
+				if (this.msg == "") {
+					return
+				}
+				this.msgContent += (this.userId + ":" + this.msg + "\n")
+				this.putMsg(this.msg, true)
+				this.loading = true
+
+				// ======== 开发环境模拟回复 ========
+				return this.mockReply()
+				// ======== 开发环境模拟回复 ========
+
+				sendMsgApi({
+					userId: this.userId + '',
+					question: this.msgContent
+				}).then(({
+					status,
+					data
+				}) => {
+					if (status === 'success') {
+						this.putMsg(data.ack, false)
+						this.msgContent += ("openai:" + this.msg + "\n")
+					} else {
+						this.putMsg(res.message || '机器人开小差了，请稍后再试~', false, 'error')
+					}
+					that.loading = false
+				})
+			},
+			calcAsset() {
+				if (this.chatAsset.dfn > 0) {
+					this.chatAsset.dfn--
+					this.assetType = 'dfn'
+				} else if (this.chatAsset.n > 0) {
+					this.chatAsset.n--
+					this.assetType = 'n'
+				} else {
+					this.$squni.toast('剩余次数不足')
+					this.openBottomFunc()
+					return false
+				}
+			},
+			putMsg(msg, my = false, type = 'msg') {
+				let item = {
+					type: type,
+					msg: msg,
+					my: my,
+					date: dateFormat(new Date(), 'yyyy年MM月dd日 hh:mm')
+				}
+				this.msgList.push(item)
+				scrollToBottom()
+				if (my) {
+					this.addHistory(item)
+					// 清除消息
+					this.msg = ''
+					this.msgReply = ''
+				}
+			},
+			putMsgError(msg) {
+				this.putMsg(msg, false, 'error')
+				this.msgLoading = false
+				this.loading = false
+			},
+			addHistory(item) {
+				if (item.type === 'msg') {
+					let chatHistory = this.$squni.getStorageSync('chatHistory')
+					if (!chatHistory) {
+						chatHistory = []
+					}
+					if (chatHistory.length >= 50) {
+						chatHistory.splice(0, 1)
+					}
+					chatHistory.push(item)
+					this.$squni.setStorageSync('chatHistory', chatHistory)
+				}
+			},
+			//心跳检测
+			heartBeatTest() {
+				let globalTimer = null
+				//清除定时器
+				clearInterval(globalTimer)
+				//开启定时器定时检测心跳
+				globalTimer = setInterval(() => {
+					//发送消息给服务端
+					websocket.sendMessage('PING', null, () => {
+						//如果失败则清除定时器
+						clearInterval(globalTimer)
+					})
+				}, 10000)
+			},
+			heartStatus() {
+				this.statusTimer = interval(() => {
+					if (websocket.isOpen) {
+						this.statusColor = 'text-green'
+					} else if (this.statusColor === 'text-red') {
+						this.statusColor = 'text-yellow'
+					} else {
+						this.statusColor = 'text-red'
+					}
+				}, this.statusTimer, 200)
+			},
+			inputFocus(e) {
+				this.inputBottom = e.detail.height
+			},
+			inputBlur(e) {
+				this.inputBottom = 0
+			},
+			openBottomFunc() {
+				this.bottomFuncShow = true
+				this.$nextTick(() => {
+					this.$refs.bottomFunc.open()
+				})
+			},
+			mockReply() {
+				// 开发环境模拟回复
+				if (process.env.NODE_ENV === 'development') {
+					setTimeout(() => {
+						this.putMsg('这是模拟返回消息: ' + new Date(), false)
+						this.loading = false
+					}, 1000)
+					return
+				}
+			},
+			showMessage() {
+				uni.showToast({
+					title: '你点击了按钮',
+					icon: 'success'
+				});
+			},
+			clearChat() {
+				this.msgList = [HELLO_MSG];
+				this.$squni.toast('清理完成~')
+			},
+			open() {
+				this.$refs.popup.open()
+			},
+			/**
+			 * 点击取消按钮触发
+			 * @param {Object} done
+			 */
+			close() {
+				this.mode = this.$squni.getStorageSync('mode')
+				this.$refs.popup.close()
+				if (this.mode == '1') {
+					this.assistantName = '小鱼助理'
+				} else if (this.mode == '2') {
+					this.assistantName = '高级助理'
+				} else if (this.mode == '3') {
+					this.assistantName = '私人助理'
+				}
+				if (this.assistantDetail.id == '0') {
+					HELLO_MSG.msg = '我是您的' + this.assistantName + ',可以帮您解答疑难困惑'
+				} else {
+					HELLO_MSG.msg = '我是您的' + this.assistantName + ',可以帮您解答疑难困惑' + '[提示词:' + this.assistantDetail.name + ']'
+				}
+			},
+			/**
+			 * 点击确认按钮触发
+			 * @param {Object} done
+			 * @param {Object} value
+			 */
+			confirm(value) {
+				console.log(value)
+				this.$squni.setStorageSync('mode', value)
+				this.mode = this.$squni.getStorageSync('mode')
+				// 重新连接
+				try {
+					//建立socket连接
+					websocket.connectSocket(this.$config.wssUrl + '/tools/chat/user/' + this.userId + '/' + this.mode + '/' + this.assistantDetail.id,
+						msg => {
+							this.recvMsg(msg)
+						}, () => {
+							//如果连接成功则发送心跳检测
+							//this.heartBeatTest()
+						})
+				} catch (error) {
+					console.log('websocket connectSocket error:' + error)
+				}
+				this.mode = this.$squni.getStorageSync('mode')
+				// 输入框的值
+				if (this.mode == '1') {
+					this.assistantName = '小鱼助理'
+				} else if (this.mode == '2') {
+					this.assistantName = '高级助理'
+				} else if (this.mode == '3') {
+					this.assistantName = '私人助理'
+				}
+				if (this.assistantDetail.id == '0') {
+					HELLO_MSG.msg = '我是您的' + this.assistantName + ',可以帮您解答疑难困惑'
+				} else {
+					HELLO_MSG.msg = '我是您的' + this.assistantName + ',可以帮您解答疑难困惑' + '[提示词:' + this.assistantDetail.name + ']'
+				}
+				// TODO 做一些其他的事情，手动执行 close 才会关闭对话框
+				// ...
+				this.$refs.popup.close()
+				if (this.mode == '3' || this.mode == '2') {
+					this.$squni.toast('GPT4.0功能更加丰富~')
+				}
+			},
+			radioChange(v) {
+				this.mode = v.detail.value
+				// 输入框的值
+				if (this.mode == '1') {
+					this.assistantName = '小鱼助理'
+				} else if (this.mode == '2') {
+					this.assistantName = '高级助理'
+				} else if (this.mode == '3') {
+					this.assistantName = '私人助理'
+				}
+				if (this.assistantDetail.id == '0') {
+					HELLO_MSG.msg = '我是您的' + this.assistantName + ',可以帮您解答疑难困惑'
+				} else {
+					HELLO_MSG.msg = '我是您的' + this.assistantName + ',可以帮您解答疑难困惑' + '[提示词:' + this.assistantDetail.name + ']'
+				}
+			},
+		
+		}
+	}
+</script>
+
+<style>
+	.mybutton {
+		width: 200px;
+		height: 40px;
+		background-color: #007AFF;
+		color: #fff;
+		border: none;
+		border-radius: 5px;
+		margin: 20px auto;
+		text-align: center;
+		line-height: 40px;
+		cursor: pointer;
+	}
+
+	.login-content {
+		padding: 70px 10px 35px;
+		text-align: center;
+		color: #333333;
+	}
+
+	.login-title {
+		font-size: 26px;
+		font-weight: bold;
+		margin-bottom: 31px;
+	}
+
+	.login-content input {
+		height: 50px;
+		background: #F8F8F8;
+		border-radius: 25px;
+		text-align: left;
+		padding: 15px;
+		box-sizing: border-box;
+		font-size: 15px;
+	}
+
+	.iphone,
+	.password,
+	.test {
+		position: relative;
+		margin-bottom: 30px;
+	}
+
+	.iphone .uni-icons,
+	.password .uni-icons {
+		position: absolute;
+		top: 14px;
+		right: 30px;
+	}
+
+	.test-btn,
+	.password-btn {
+		color: #ff8b33;
+		font-size: 15px;
+		text-align: right;
+	}
+
+	.get-test {
+		color: #ff8b33;
+		font-size: 15px;
+		width: 122px;
+		height: 50px;
+		border: 1px solid #FF8B33;
+		border-radius: 25px;
+		line-height: 50px;
+	}
+
+	.test {
+		display: flex;
+		justify-content: space-between;
+	}
+
+	.login-btn {
+		width: 355px;
+		height: 45px;
+		background: #FF8B33;
+		border-radius: 36px;
+		color: #fff;
+		font-size: 20px;
+		text-align: center;
+		line-height: 45px;
+		position: fixed;
+		bottom: 60px;
+	}
+
+	page {
+		padding-bottom: 200upx;
+	}
+
+	.cu-chat .chat-avatar.cu-avatar {
+		width: 82upx;
+		height: 82upx;
+	}
+
+	.cu-item:not(.first) {
+		padding-bottom: 0upx;
+	}
+
+	.cu-item.sec {
+		padding-top: 0upx;
+	}
+
+	.main .content {
+		word-wrap: break-word;
+	}
+
+	.foot {
+		padding-top: 20upx;
+		padding-bottom: 60upx;
+	}
+
+	/* 	.cu-bar{
+		height: 120px;
+	} */
+
+	.myimage {
+		height: 12px;
+		width: 12px;
+		vertical-align: middle;
+	}
+
+	/**index.wxss**/
+	.box {
+		display: flex;
+		flex-direction: column;
+		align-items: stretch;
+		/* 子元素水平占满父元素 */
+	}
+
+	.box1 {
+		flex: 1;
+		/* 每个部分均等分父元素的剩余空间，以横向占满 */
+		margin: 10;
+		/* 为了创建上下间距 */
+		display: flex;
+		flex-direction: row;
+
+		padding-left: 15px;
+		padding-bottom: 5px;
+	}
+
+	.box2 {
+		padding: 30rpx;
+		display: flex;
+		gap: 45px;
+	}
+
+	.myview {
+		border: 1rpx solid #58b8b3;
+		border-radius: 30rpx;
+		padding: 13rpx;
+		display: flex;
+		gap: 8px;
+		align-items: center;
+		/* 垂直居中对齐子元素 */
+	}
+
+	.fcbox {
+		gap: 20px;
+	}
+</style>

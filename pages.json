@@ -1,0 +1,42 @@
+{
+	// "condition": { //模式配置，仅开发期间生效
+	// 	"current": 0, //当前激活的模式(list 的索引项)
+	// 	"list": [{
+	// 		"name": "test", //模式名称
+	// 		"path": "pages/packA/test/test", //启动页面，必选
+	// 		"query": "" //启动参数，在页面的onLoad函数里面得到
+	// 	}]
+	// },
+	"pages": [ //pages数组中第一项表示应用启动页，参考：https://uniapp.dcloud.io/collocation/pages
+		{
+			"path": "pages/main/index",
+			"style": {
+				"navigationBarTitleText": "金鱼能聊天"
+			}
+		},
+		{
+			"path": "pages/main/history",
+			"style": {
+				"navigationBarTitleText": "聊天历史"
+			}
+		},
+		{
+			"path": "pages/main/assistant",
+			"style": {
+				"navigationBarTitleText": "角色列表"
+			}
+		},
+		{
+			"path": "pages/main/prompt",
+			"style": {
+				"navigationBarTitleText": "提示词列表"
+			}
+		}
+    ],
+	"globalStyle": {		
+		"navigationBarBackgroundColor": "#0081ff",
+		"navigationBarTitleText": "金鱼能聊天",
+		"navigationBarTextStyle": "white",
+		"navigationStyle": "custom"
+	}
+}
