@@ -67,7 +67,7 @@
 				<scroll-view scroll-y style="height: 500px;">
 					<view style="display: flex;flex-direction: row;padding-top: 5px;align-items: center;">
 						<text style="font-size: 17px;padding-left: 37%;">提示词详细</text>
-						<uni-fav :checked="detail.isFavorite" class="favBtn" :circle="true" bg-color="#dd524d"
+						<uni-fav :checked="detail.isFavorite == '1'" class="favBtn" :circle="true" bg-color="#dd524d"
 							bg-color-checked="#007aff" fg-color="#ffffff" fg-color-checked="#ffffff" @click="favClick"
 							style="padding-left: 2%;" />
 						<view style="flex: 1;" @click="toIndex(detail)">
@@ -170,7 +170,8 @@
 				fullHeight: "",
 				tabWidth: 0, // 选项卡的宽度
 				tabSpacing: 20, // 选项卡之间的间距
-				itemList: ''
+				itemList: '',
+				favoriteList: [],
 			}
 		},
 		mounted() {
@@ -182,7 +183,7 @@
 					this.getScrollW(); // 获取元素位置信息
 				});
 				this.itemList = this.category[this.isActive].itemList
-				console.log(this.itemList)
+				
 			});
 			var that = this;
 			//获取手机屏幕的高度，让其等于swiper的高度，从而使屏幕充满
@@ -196,6 +197,7 @@
 			open(x) {
 				this.detail = x;
 				this.$refs.popup.open()
+				console.log(x)
 			},
 			favClick() {
 				this.detail.isFavorite = !this.detail.isFavorite
@@ -236,8 +238,7 @@
 				this.$refs.popup.close()
 			},
 			toIndex(value) {
-				console.log("开始调用跳转页面")
-				console.log(value)
+			
 				uni.navigateTo({
 					url: "/pages/main/index?data=" + encodeURIComponent(JSON.stringify(value)),
 					// url:"../component/classdetails/classdetails?newsid="+ newsid,

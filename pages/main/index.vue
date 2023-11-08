@@ -34,7 +34,7 @@
 						:class="[i === 0 ? 'first' : '', i === 1 ? 'sec' : '']">
 						<view class="main">
 							<view class="content bg-cyan shadow" :class="{ 'hidden-pseudo-element': !isPseudoElementVisible }" @click="x.msg && $squni.copy(x.msg)">
-								<text>{{ x.msg }}</text>
+								<text class="mytext">{{ x.msg }}</text>
 							</view>
 						</view>
 						<image class="cu-avatar round" :src="'../../static/answer.png'">
@@ -50,7 +50,7 @@
 						</view>
 						<view class="main" style="display: flex;flex-direction: row;" >
 							<view class="content shadow" @click="x.msg && $squni.copy(x.msg)" :class="{ 'hidden-pseudo-element': !isPseudoElementVisible }">
-								<text>{{ x.msg }}</text>
+								<text class="mytext">{{ x.msg }}</text>
 							</view>
 						</view>
 						<view @click="open" v-if="i === 0">
@@ -703,5 +703,12 @@
 
 	.fcbox {
 		gap: 20px;
+	}
+	.mytext {
+		display: -webkit-box;
+		/* 最多展示两行 */
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 </style>
