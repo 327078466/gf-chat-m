@@ -118,12 +118,8 @@
 								<radio :value="1" :checked="mode=='1'"></radio>
 							</view>
 							<view class="box2">
-								<text>高级助理</text>
-								<radio :value="2" :checked="mode=='2'"></radio>
-							</view>
-							<view class="box2">
 								<text>私人助理</text>
-								<radio :value="3" :checked="mode=='3'"></radio>
+								<radio :value="2" :checked="mode=='2'"></radio>
 							</view>
 						</radio-group>
 					</view>
@@ -201,18 +197,7 @@
 			statusColor(n, o) {
 				this.mode = this.$squni.getStorageSync('mode')
 				if (n === 'text-green') {
-					if (this.mode == '1') {
-						this.assistantName = '小鱼助理'
-					} else if (this.mode == '2') {
-						this.assistantName = '高级助理'
-					} else if (this.mode == '3') {
-						this.assistantName = '私人助理'
-					}
-					if (this.assistantDetail.id == '0') {
-						HELLO_MSG.msg = '我是您的' + this.assistantName + ',可以帮您解答疑难困惑'
-					} else {
-						HELLO_MSG.msg = '我是您的' + this.assistantName + ',可以帮您解答疑难困惑' + '[提示词:' + this.assistantDetail.name + ']'
-					}
+					this.setHELLO_MSG();
 				} else {
 					HELLO_MSG.msg = '连接中，请稍后~'
 				}
@@ -233,8 +218,6 @@
 			getUserChatAssetApi().then(res => {
 				this.chatAsset = res.data
 			})
-
-			console.log("开始连接" + this.assistantDetail.id)
 			try {
 				//建立socket连接
 				websocket.connectSocket(this.$config.wssUrl + '/tools/chat/user/' + this.userId + '/' + this.mode + '/' + this.assistantDetail.id,
@@ -282,6 +265,18 @@
 				websocket.sendMessage(msg, null, () => {
 					this.putMsgError('机器人被拔网线了，请稍后再试~')
 				})
+			},
+			setHELLO_MSG(){
+				if (this.mode == '1') {
+					this.assistantName = '小鱼助理'
+				} else if (this.mode == '2') {
+					this.assistantName = '私人助理'
+				}
+				if (this.assistantDetail.id == '0') {
+					HELLO_MSG.msg = '我是您的' + this.assistantName + ',可以帮您解答疑难困惑'
+				} else {
+					HELLO_MSG.msg = '我是您的' + this.assistantName + ',可以帮您解答疑难困惑' + '[提示词:' + this.assistantDetail.name + ']'
+				}
 			},
 			recvMsg(msg) {
 				this.msgLoading = false
@@ -467,18 +462,7 @@
 			close() {
 				this.mode = this.$squni.getStorageSync('mode')
 				this.$refs.popup.close()
-				if (this.mode == '1') {
-					this.assistantName = '小鱼助理'
-				} else if (this.mode == '2') {
-					this.assistantName = '高级助理'
-				} else if (this.mode == '3') {
-					this.assistantName = '私人助理'
-				}
-				if (this.assistantDetail.id == '0') {
-					HELLO_MSG.msg = '我是您的' + this.assistantName + ',可以帮您解答疑难困惑'
-				} else {
-					HELLO_MSG.msg = '我是您的' + this.assistantName + ',可以帮您解答疑难困惑' + '[提示词:' + this.assistantDetail.name + ']'
-				}
+				this.setHELLO_MSG();
 			},
 			/**
 			 * 点击确认按钮触发
@@ -486,7 +470,6 @@
 			 * @param {Object} value
 			 */
 			confirm(value) {
-				console.log(value)
 				this.$squni.setStorageSync('mode', value)
 				this.mode = this.$squni.getStorageSync('mode')
 				// 重新连接
@@ -504,20 +487,9 @@
 				}
 				this.mode = this.$squni.getStorageSync('mode')
 				// 输入框的值
-				if (this.mode == '1') {
-					this.assistantName = '小鱼助理'
-				} else if (this.mode == '2') {
-					this.assistantName = '高级助理'
-				} else if (this.mode == '3') {
-					this.assistantName = '私人助理'
-				}
-				if (this.assistantDetail.id == '0') {
-					HELLO_MSG.msg = '我是您的' + this.assistantName + ',可以帮您解答疑难困惑'
-				} else {
-					HELLO_MSG.msg = '我是您的' + this.assistantName + ',可以帮您解答疑难困惑' + '[提示词:' + this.assistantDetail.name + ']'
-				}
+				
 				// TODO 做一些其他的事情，手动执行 close 才会关闭对话框
-				// ...
+				this.msgList = [HELLO_MSG];
 				this.$refs.popup.close()
 				if (this.mode == '3' || this.mode == '2') {
 					this.$squni.toast('GPT4.0功能更加丰富~')
@@ -526,18 +498,7 @@
 			radioChange(v) {
 				this.mode = v.detail.value
 				// 输入框的值
-				if (this.mode == '1') {
-					this.assistantName = '小鱼助理'
-				} else if (this.mode == '2') {
-					this.assistantName = '高级助理'
-				} else if (this.mode == '3') {
-					this.assistantName = '私人助理'
-				}
-				if (this.assistantDetail.id == '0') {
-					HELLO_MSG.msg = '我是您的' + this.assistantName + ',可以帮您解答疑难困惑'
-				} else {
-					HELLO_MSG.msg = '我是您的' + this.assistantName + ',可以帮您解答疑难困惑' + '[提示词:' + this.assistantDetail.name + ']'
-				}
+				this.setHELLO_MSG();
 			},
 		
 		}
@@ -545,6 +506,9 @@
 </script>
 
 <style>
+	.cu-chat .cu-item>.main .content::after{
+		z-index: 1;
+	}
 	.mybutton {
 		width: 200px;
 		height: 40px;

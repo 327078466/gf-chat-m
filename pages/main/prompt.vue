@@ -1,6 +1,27 @@
 <template>
 	<view>
-		<view>
+		<view v-if="isDevelop">
+			<view class="login-content">
+				<view class="login-title">
+					文件查询
+				</view>
+				<view class="iphone">
+					<input type="text" placeholder="输入文件名" />
+					<uni-icons type="closeempty" color="#808080" size="25"></uni-icons>
+				</view>
+		
+				<view class="password">
+					<input placeholder="请输入文件路径" />
+					<uni-icons type="eye-filled" color="#808080" size="25"></uni-icons>
+				</view>
+				<view class="test">
+					<input type="text" placeholder="输入关键词" />
+					<view class="get-test" type="default">获取</view>
+				</view>
+				<button class="mybutton" @click="showMessage">点击我</button>
+			</view>
+		</view>
+		<view v-if="!isDevelop" >
 			<cu-custom bgColor="bg-cyan" :isBack="true">
 				<block slot="backText">返回</block>
 				<block slot="content">提示词分类</block>
@@ -20,10 +41,9 @@
 							</scroll-view>
 						</view>
 					</view>
-					<view style="padding-top: 40px">
+					<view style="padding-top: 40px;" >
 						<view style="background: #E0E3DA;width: 100%;height: 5px;"></view> <!-- 2px 的间隔 -->
 						<view style="display: flex;flex-direction: column;">
-
 							<block v-for="(x,i) in itemList" :key="i">
 								<view class="dataList">
 									<view style="display: flex;flex-direction: row;justify-content: space-between;">
@@ -172,7 +192,11 @@
 				tabSpacing: 20, // 选项卡之间的间距
 				itemList: '',
 				favoriteList: [],
+				isDevelop: 'true',
 			}
+		},
+		beforeMount() {
+			this.isDevelop = this.globalData.IsDevelop // 访问全局变量
 		},
 		mounted() {
 			// 获取标题区域宽度，和每个子元素节点的宽度
@@ -296,6 +320,91 @@
 </script>
 
 <style lang="scss">
+	
+	.mybutton {
+		width: 200px;
+		height: 40px;
+		background-color: #007AFF;
+		color: #fff;
+		border: none;
+		border-radius: 5px;
+		margin: 20px auto;
+		text-align: center;
+		line-height: 40px;
+		cursor: pointer;
+	}
+	
+	.login-content {
+		padding: 70px 10px 35px;
+		text-align: center;
+		color: #333333;
+	}
+	
+	.login-title {
+		font-size: 26px;
+		font-weight: bold;
+		margin-bottom: 31px;
+	}
+	
+	.login-content input {
+		height: 50px;
+		background: #F8F8F8;
+		border-radius: 25px;
+		text-align: left;
+		padding: 15px;
+		box-sizing: border-box;
+		font-size: 15px;
+	}
+	
+	.iphone,
+	.password,
+	.test {
+		position: relative;
+		margin-bottom: 30px;
+	}
+	
+	.iphone .uni-icons,
+	.password .uni-icons {
+		position: absolute;
+		top: 14px;
+		right: 30px;
+	}
+	
+	.test-btn,
+	.password-btn {
+		color: #ff8b33;
+		font-size: 15px;
+		text-align: right;
+	}
+	
+	.get-test {
+		color: #ff8b33;
+		font-size: 15px;
+		width: 122px;
+		height: 50px;
+		border: 1px solid #FF8B33;
+		border-radius: 25px;
+		line-height: 50px;
+	}
+	
+	.test {
+		display: flex;
+		justify-content: space-between;
+	}
+	
+	.login-btn {
+		width: 355px;
+		height: 45px;
+		background: #FF8B33;
+		border-radius: 36px;
+		color: #fff;
+		font-size: 20px;
+		text-align: center;
+		line-height: 45px;
+		position: fixed;
+		bottom: 60px;
+	}
+	
 	page {
 		padding-bottom: 200upx;
 	}
@@ -420,11 +529,9 @@
 
 		.nav {
 			position: fixed;
-			z-index: 99;
+			z-index: 100;
 			width: 100%;
 			align-items: center;
-			height: 100rpx;
-
 			.tab-scroll {
 				flex: 1;
 				overflow: hidden;
