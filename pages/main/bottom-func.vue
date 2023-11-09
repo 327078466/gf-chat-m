@@ -33,7 +33,7 @@
 						<view class="flex justify-between align-center margin-top">
 							<view class="flex flex-direction align-start">
 								<view class="text-bold myfont">邀请新的小伙伴来体验</view>
-								<view class="padding-tb-xs myfont">奖励 10 次/人，每天最多 5 人</view>
+								<view class="padding-tb-xs myfont">奖励 30 次/人</view>
 								<view class="text-xs text-gray myfont">提示：点击右上角···可分享给朋友进行邀请</view>
 							</view>
 							<view>
@@ -43,7 +43,7 @@
 						<view class="flex justify-between align-center margin-top">
 							<view class="flex flex-direction align-start">
 								<view class="text-bold padding-bottom-sm myfont">看视频广告攒次数</view>
-								<view class="myfont">奖励 3 次/个，每天最多看 10 次</view>
+								<view class="myfont">奖励 30 次/个</view>
 							</view>
 							<button class="cu-btn lines-cyan round" @click="$squni.toast('功能完善中，敬请期待~')">观看视频</button>
 						</view>
@@ -62,20 +62,20 @@
 			</view>
 		</view>
 		
-		<bottom-drawer v-model="showVip" title="开通会员">
+<!-- 		<bottom-drawer v-model="showVip" title="开通会员">
 			<view>
 				<view class="margin-tb">添加【鱼汇】微信号，回复关键字【金鱼能聊天】</view>
 				<image src="http://ai.cwph.cn/images/goldfish.png"
 					mode="aspectFit" width="100" height="100"></image>
 			</view>
-		</bottom-drawer>
-		<bottom-drawer v-model="showNum" title="次数包">
+		</bottom-drawer> -->
+<!-- 		<bottom-drawer v-model="showNum" title="次数包">
 			<view>
 				<view class="margin-tb">添加【鱼汇】微信号，回复关键字【金鱼能聊天】</view>
 				<image src="http://ai.cwph.cn/images/goldfish.png"
 					mode="aspectFit" width="100" height="100"></image>
 			</view>
-		</bottom-drawer>
+		</bottom-drawer> -->
 		<bottom-drawer v-model="showCustomer" title="客服领次数">
 			<view>
 				 <button class='cu-btn lines-cyan round' open-type="contact"><text class='text-grey'>联系客服</text></button>
@@ -101,21 +101,23 @@
 				showVip: false,
 				showNum: false,
 				showCustomer: false,
-				cuIconList: [{
-					cuIcon: 'vip',
-					color: 'orange',
-					name: '开通会员',
-					callback: () => {
-						this.showVip = true
-					}
-				}, {
-					cuIcon: 'baby',
-					color: 'blue',
-					name: '次数包',
-					callback: () => {
-						this.showNum = true
-					}
-				}, {
+				cuIconList: [
+				// 	{
+				// 	cuIcon: 'vip',
+				// 	color: 'orange',
+				// 	name: '开通会员',
+				// 	callback: () => {
+				// 		this.showVip = true
+				// 	}
+				// }, {
+				// 	cuIcon: 'baby',
+				// 	color: 'blue',
+				// 	name: '次数包',
+				// 	callback: () => {
+				// 		this.showNum = true
+				// 	}
+				// }, 
+				{
 					cuIcon: 'service',
 					color: 'cyan',
 					name: '客服领次数',
