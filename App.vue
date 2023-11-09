@@ -10,7 +10,7 @@
 		async onLaunch(e) {
 			//判断是否开发版
 			const accountInfo = uni.getAccountInfoSync();
-			if (accountInfo.miniProgram.envVersion === 'trial') {
+			if (accountInfo.miniProgram.envVersion === 'trial' || accountInfo.miniProgram.envVersion === 'develop') {
 			    this.globalData.IsDevelop = true;
 			} else {
 				this.globalData.IsDevelop = false;
