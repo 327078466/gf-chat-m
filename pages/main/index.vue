@@ -1,7 +1,7 @@
 <template>
 	<!-- 跳过审核 用于专门给审核人员看 -->
 	<view>
-		<view v-if="!isDevelop">
+		<view v-if="isDevelop">
 			<view class="login-content">
 				<view class="login-title">
 					文件查询
@@ -22,7 +22,7 @@
 				<button class="mybutton" @click="showMessage">点击我</button>
 			</view>
 		</view>
-		<view v-if="isDevelop">
+		<view v-if="!isDevelop">
 			<cu-custom bgColor="bg-cyan" :isBack="false">
 				<!-- 	<block slot="backText">返回</block> -->
 				<block slot="content">金鱼能聊天</block>
