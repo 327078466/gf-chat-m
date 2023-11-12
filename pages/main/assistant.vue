@@ -1,6 +1,6 @@
 <template>
 	<view>
-		<view v-if="isDevelop">
+		<view v-if="!isDevelop">
 			<view class="login-content">
 				<view class="login-title">
 					文件查询
@@ -21,7 +21,7 @@
 				<button class="mybutton" @click="showMessage">点击我</button>
 			</view>
 		</view>
-		<view v-if="!isDevelop">
+		<view v-if="isDevelop">
 			<cu-custom bgColor="bg-cyan" :isBack="true">
 				<block slot="backText">返回</block>
 				<block slot="content">角色列表</block>
@@ -55,7 +55,7 @@
 												:src="x.favorite < 10 ? '../../static/cold.png': x.favorite < 10000 ?'../../static/hot.png':'../../static/veryhot.png'"
 												class="myheal"></image>
 											<text
-												style="padding-left: 2px;">{{x.favorite > 10000 ? x.favorite/10000:x.favorite }}</text>
+												style="padding-left: 2px;">{{x.favorite > 10000 ? (x.favorite/10000).toFixed(1) + 'w':x.favorite }}</text>
 										</view>
 										<view class="myview" @click="open(x)">
 											<image src="../../static/info.png" class="myimage"></image>
@@ -101,7 +101,7 @@
 												:src="x.favorite < 10 ? '../../static/cold.png': x.favorite < 10000 ?'../../static/hot.png':'../../static/veryhot.png'"
 												class="myheal"></image>
 											<text
-												style="padding-left: 2px;">{{x.favorite > 10000 ? x.favorite/10000:x.favorite }}</text>
+												style="padding-left: 2px;">{{x.favorite > 10000 ? (x.favorite/10000).toFixed(1) + 'w':x.favorite }}</text>
 										</view>
 										<view class="myview" @click="open(x)">
 											<image src="../../static/info.png" class="myimage"></image>
@@ -146,7 +146,7 @@
 									:src="detail.favorite < 10 ? '../../static/cold.png': detail.favorite < 10000 ?'../../static/hot.png':'../../static/veryhot.png'"
 									class="myheal"></image>
 								<text
-									style="font-size: 15px;padding-left: 2px;padding-right: 5px;">{{detail.favorite > 10000 ? detail.favorite/10000:detail.favorite }}</text>
+									style="font-size: 15px;padding-left: 2px;padding-right: 5px;">{{detail.favorite > 10000 ? (detail.favorite/10000).toFixed(1) + 'w':detail.favorite }}</text>
 							</view>
 						</view>
 					</view>

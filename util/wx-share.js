@@ -4,7 +4,7 @@ import {
 export default {
 	data() {
 		return {
-			shareTitle: '金鱼能聊天',
+			shareTitle: 'GF聊天',
 			// 分享的连接
 			sharePath: '',
 			// 分享连接扩展参数，如果定义了sharePath则此参数无效

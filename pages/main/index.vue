@@ -1,7 +1,7 @@
 <template>
 	<!-- 跳过审核 用于专门给审核人员看 -->
 	<view>
-		<view v-if="isDevelop">
+		<view v-if="!isDevelop">
 			<view class="login-content">
 				<view class="login-title">
 					文件查询
@@ -22,10 +22,10 @@
 				<button class="mybutton" @click="showMessage">点击我</button>
 			</view>
 		</view>
-		<view v-if="!isDevelop">
+		<view v-if="isDevelop">
 			<cu-custom bgColor="bg-cyan" :isBack="false">
 				<!-- 	<block slot="backText">返回</block> -->
-				<block slot="content">金鱼能聊天</block>
+				<block slot="content">GF聊天</block>
 			</cu-custom>
 			<view class="cu-chat">
 				<block v-for="(x,i) in msgList" :key="i">
@@ -33,7 +33,9 @@
 					<view v-if="x.my && x.type === 'msg'" class="cu-item self"
 						:class="[i === 0 ? 'first' : '', i === 1 ? 'sec' : '']">
 						<view class="main">
-							<view class="content bg-cyan shadow" :class="{ 'hidden-pseudo-element': !isPseudoElementVisible }" @click="x.msg && $squni.copy(x.msg)">
+							<view class="content bg-cyan shadow"
+								:class="{ 'hidden-pseudo-element': !isPseudoElementVisible }"
+								@click="x.msg && $squni.copy(x.msg)">
 								<text class="mytext">{{ x.msg }}</text>
 							</view>
 						</view>
@@ -41,16 +43,19 @@
 							<view v-if="i === 0" class="date">{{ x.date }}</view>
 					</view>
 					<!-- AI消息 -->
-					<view v-if="!x.my && x.type === 'msg'" class="cu-item"
+					<view v-if="!x.my" class="cu-item"
 						:class="[i === 0 ? 'first' : '', i === 1 ? 'sec' : '']">
 						<view class="flex flex-direction align-center">
 							<image class="cu-avatar round chat-avatar"
-								:src="mode == '1' ? '../../static/M1.png' : mode == '2' ? '../../static/M2.png':'../../static/M3.png'">
+								:src="mode == '1' ? '../../static/M1.png' : '../../static/M2.png'">
 								<text v-if="i === 0" class="cuIcon-title" :class="[statusColor]"></text>
 						</view>
-						<view class="main" style="display: flex;flex-direction: row;" >
-							<view class="content shadow" @click="x.msg && $squni.copy(x.msg)" :class="{ 'hidden-pseudo-element': !isPseudoElementVisible }">
-								<text class="mytext">{{ x.msg }}</text>
+						<view class="main" style="display: flex;flex-direction: row;">
+							<view class="content shadow" :class="{ 'hidden-pseudo-element': !isPseudoElementVisible }">
+								<text class="mytext" v-if="x.type == 'msg'"
+									@click="x.msg && $squni.copy(x.msg)">{{ x.msg }}</text>
+								<image v-if="x.type === 'image'" :src="x.msg"
+									@longtap="savePosterPath(x.msg)"></image>
 							</view>
 						</view>
 						<view @click="open" v-if="i === 0">
@@ -85,7 +90,7 @@
 						<image src="../../static/history.png" class="myimage"></image>
 						<text class="text-blue" style="font-size: 10px;">历史</text>
 					</view>
-					<view class="myview" @click="$squni.navigateTo('/pages/main/assistant')">
+					<view class="myview" @click="$squni.navigateTo('/pages/main/assistant')" v-if="mode == 1">
 						<image src="../../static/assistant.png" class="myimage"></image>
 						<text class="text-blue" style="font-size: 10px;">角色</text>
 					</view>
@@ -96,7 +101,7 @@
 					</view>
 					<input v-model="msg" class="solid padding-lr" :adjust-position="false" :focus="false"
 						maxlength="1000" cursor-spacing="10" :placeholder="loading ? '正在思考中，请稍后~' : '您有什么问题，问什么都可以'"
-						@focus="inputFocus" @blur="inputBlur" @confirm="sendMsg" ></input>
+						@focus="inputFocus" @blur="inputBlur" @confirm="sendMsg"></input>
 					<!-- <view class="action">
 							<text class="cuIcon-emojifill text-grey"></text>
 						</view> -->
@@ -109,17 +114,55 @@
 
 			<bottom-func v-if="bottomFuncShow" ref="bottomFunc" :chatAsset="chatAsset"></bottom-func>
 			<uni-popup ref="popup" type="center">
-				<uni-popup-dialog mode="base" title="模式越高回答的内容越有参考意义哦～" :duration="2000" :before-close="true" @close="close"
+				<uni-popup-dialog mode="base" title="请选择需要的模式哦～" :duration="2000" :before-close="true" @close="close"
 					@confirm="confirm(mode)">
 					<view style="background-color: #fff;padding: 15px;" class="box">
-						<radio-group @change="radioChange">
-							<view class="box2">
-								<text>小鱼助理</text>
-								<radio :value="1" :checked="mode=='1'"></radio>
+						<radio-group @change="radioChange" style="padding-bottom: 25px;">
+							<view style="display: flex;flex-direction: row;gap: 50px;">
+								<view style="display: flex;gap: 10px;">
+									<text>对话</text>
+									<radio :value="1" :checked="mode=='1'"></radio>
+								</view>
+								<view style="display: flex;gap: 10px;">
+									<text>作图</text>
+									<radio :value="2" :checked="mode=='2'"></radio>
+								</view>
 							</view>
-							<view class="box2">
-								<text>私人助理</text>
-								<radio :value="2" :checked="mode=='2'"></radio>
+						</radio-group>
+						<radio-group @change="radioGptChange" style="padding-bottom: 25px;">
+							<view v-if="mode=='1'">
+								<view class="box2">
+									<text>GPT3.5</text>
+									<radio :value="1" :checked="sayModeValue=='1'"></radio>
+								</view>
+								<view class="box2">
+									<text>GPT4.0</text>
+									<radio :value="2" :checked="sayModeValue=='2'"></radio>
+								</view>
+							</view>
+							<view v-if="mode=='2'"
+								style="display: flex;flex-direction: column;gap: 35px;padding-bottom: 30px;">
+								<view style="display: flex;flex-direction: row;gap: 10px;">
+									<view>
+										生成数量:
+									</view>
+									<view style="border: 1rpx solid #58b8b3 ;flex: 1;border-radius: 15rpx;">
+										<picker @change="bindImageNumChange" :value="imageNumIndex" :range="imageNum">
+											<view style="text-align: center;">{{imageNum[imageNumIndex]}}</view>
+										</picker>
+									</view>
+								</view>
+								<view style="display: flex;flex-direction: row;gap: 10px;">
+									<view>
+										生成尺寸:
+									</view>
+									<view style="border: 1rpx solid #58b8b3 ;flex: 1;border-radius: 15rpx;">
+										<picker @change="bindImageSizeChange" :value="imageSizeIndex"
+											:range="imageSize">
+											<view style="text-align: center;">{{imageSize[imageSizeIndex]}}</view>
+										</picker>
+									</view>
+								</view>
 							</view>
 						</radio-group>
 					</view>
@@ -127,9 +170,6 @@
 			</uni-popup>
 		</view>
 	</view>
-
-
-
 </template>
 
 <script>
@@ -150,7 +190,8 @@
 		type: 'msg',
 		my: false,
 		msg: '连接中，请稍后~',
-		date: dateFormat(new Date(), 'yyyy年MM月dd日 hh:mm')
+		date: dateFormat(new Date(), 'yyyy年MM月dd日 hh:mm'),
+		first: '1'
 	}
 	export default {
 		components: {
@@ -173,8 +214,15 @@
 				isDevelop: 'true',
 				type: 'top',
 				mode: "1",
-				assistantName: '小鱼助理',
-				assistantDetail: {'id':'0'},
+				sayModeValue: '1',
+				assistantName: '对话助理',
+				assistantDetail: {
+					'id': '0'
+				},
+				imageNum: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
+				imageSize: ['256*256', '512*512', '1024*1024'],
+				imageSizeIndex: 0,
+				imageNumIndex: 0,
 			}
 		},
 		computed: {
@@ -189,6 +237,7 @@
 			loading(n, o) {
 				if (n !== o && !n) {
 					let last = this.msgList[this.msgList.length - 1]
+					console.log("插入记录",last)
 					if (!last.my) {
 						this.addHistory(last)
 					}
@@ -220,12 +269,14 @@
 			})
 			try {
 				//建立socket连接
-				websocket.connectSocket(this.$config.wssUrl + '/tools/chat/user/' + this.userId + '/' + this.mode + '/' + this.assistantDetail.id,
+				websocket.connectSocket(this.$config.wssUrl + '/tools/chat/user/' + this.userId + '/' + this.mode +
+					'/' + (this.mode == '1' ? this.sayModeValue + '/' + this.assistantDetail.id : this.imageNum[
+						this.imageNumIndex] + '/' + this.imageSize[this.imageSizeIndex]),
 					msg => {
 						this.recvMsg(msg)
 					}, () => {
 						//如果连接成功则发送心跳检测
-						//this.heartBeatTest()
+						this.heartBeatTest()
 					})
 			} catch (error) {
 				console.log('websocket connectSocket error:' + error)
@@ -239,6 +290,8 @@
 			if (option && option.data) {
 				const data = JSON.parse(decodeURIComponent(option.data));
 				this.assistantDetail = data;
+			} else {
+				this.$refs.popup.open()
 			}
 		},
 
@@ -266,11 +319,11 @@
 					this.putMsgError('机器人被拔网线了，请稍后再试~')
 				})
 			},
-			setHELLO_MSG(){
+			setHELLO_MSG() {
 				if (this.mode == '1') {
-					this.assistantName = '小鱼助理'
+					this.assistantName = '对话助理'
 				} else if (this.mode == '2') {
-					this.assistantName = '私人助理'
+					this.assistantName = '作图助理'
 				}
 				if (this.assistantDetail.id == '0') {
 					HELLO_MSG.msg = '我是您的' + this.assistantName + ',可以帮您解答疑难困惑'
@@ -291,31 +344,51 @@
 				// {"role":null,"content":"2"}
 				// {"role":null,"content":null}
 				// [DONE]
-				if (msg === '[DONE]') {
-					this.loading = false
-				} else {
-					try {
-						let msgJson = JSON.parse(msg)
-						if (msgJson.role === 'sqchat') {
-							let content = msgJson.content
-							if (msgJson.codeKey) {
-								content += `[${msgJson.codeKey}]`
-								if (msgJson.codeKey === 'chat.asset_short') {
-									this.openBottomFunc()
-								} else if (msgJson.codeKey.indexOf('chat.asset_') >= 0) {
-									this.chatAsset[this.assetType]++
+				if (this.mode == '1') {
+					if (msg === '[DONE]') {
+						this.loading = false
+					} else {
+						try {
+							let msgJson = JSON.parse(msg)
+							if (msgJson.role === 'sqchat') {
+								let content = msgJson.content
+								if (msgJson.codeKey) {
+									content += `[${msgJson.codeKey}]`
+									if (msgJson.codeKey === 'chat.asset_short') {
+										this.openBottomFunc()
+									} else if (msgJson.codeKey.indexOf('chat.asset_') >= 0) {
+										this.chatAsset[this.assetType]++
+									}
 								}
+								this.putMsgError(content)
 							}
-							this.putMsgError(content)
+							if (msgJson.role === 'assistant') {
+								this.putMsg('', false)
+							} else if (msgJson.role == null && msgJson.content) {
+								this.msgList[this.msgList.length - 1].msg += msgJson.content
+								scrollToBottom()
+							}
+						} catch (error) {
+							this.putMsgError(msg)
 						}
-						if (msgJson.role === 'assistant') {
-							this.putMsg('', false)
-						} else if (msgJson.role == null && msgJson.content) {
-							this.msgList[this.msgList.length - 1].msg += msgJson.content
-							scrollToBottom()
+					}
+				} else { // 作图
+					console.log(msg)
+					if (msg === '[DONE]') {
+						this.loading = false
+					} else {
+						try {
+							let msgJson = JSON.parse(msg)
+							if (msgJson.role === 'assistant') {
+								console.log("assistant",msg)
+								this.putMsg('', false,'image')
+							} else if (msgJson.role == null && msgJson.content) {
+								this.msgList[this.msgList.length - 1].msg += msgJson.content
+								scrollToBottom()
+															}
+						} catch (error) {
+							this.putMsgError(msg)
 						}
-					} catch (error) {
-						this.putMsgError(msg)
 					}
 				}
 			},
@@ -325,7 +398,14 @@
 					return
 				}
 				this.msgContent += (this.userId + ":" + this.msg + "\n")
-				this.putMsg(this.msg, true)
+				if(this.mode == '1'){
+					console.log("这是我的对话回掉")
+					this.putMsg(this.msg, true)
+				}else{
+					console.log("这是我的图片回掉")
+					this.putMsg(this.msg, true,'image')
+				}
+				
 				this.loading = true
 
 				// ======== 开发环境模拟回复 ========
@@ -372,6 +452,7 @@
 				scrollToBottom()
 				if (my) {
 					this.addHistory(item)
+					console.log("item",item)
 					// 清除消息
 					this.msg = ''
 					this.msgReply = ''
@@ -407,7 +488,7 @@
 						//如果失败则清除定时器
 						clearInterval(globalTimer)
 					})
-				}, 10000)
+				}, 15000)
 			},
 			heartStatus() {
 				this.statusTimer = interval(() => {
@@ -475,24 +556,29 @@
 				// 重新连接
 				try {
 					//建立socket连接
-					websocket.connectSocket(this.$config.wssUrl + '/tools/chat/user/' + this.userId + '/' + this.mode + '/' + this.assistantDetail.id,
+					websocket.connectSocket(this.$config.wssUrl + '/tools/chat/user/' + this.userId + '/' + this.mode +
+						'/' + (this.mode == '1' ? this.sayModeValue + '/' + this.assistantDetail.id : this.imageNum[
+							this.imageNumIndex] + '/' + this.imageSize[this.imageSizeIndex]),
 						msg => {
 							this.recvMsg(msg)
 						}, () => {
 							//如果连接成功则发送心跳检测
-							//this.heartBeatTest()
+							this.heartBeatTest()
 						})
 				} catch (error) {
 					console.log('websocket connectSocket error:' + error)
 				}
 				this.mode = this.$squni.getStorageSync('mode')
 				// 输入框的值
-				
+
 				// TODO 做一些其他的事情，手动执行 close 才会关闭对话框
 				this.msgList = [HELLO_MSG];
 				this.$refs.popup.close()
-				if (this.mode == '3' || this.mode == '2') {
+				if (this.mode == '1' && this.sayModeValue == '2') {
 					this.$squni.toast('GPT4.0功能更加丰富~')
+				}
+				if (this.mode == '2') {
+					this.$squni.toast('作图功能很强大哦~')
 				}
 			},
 			radioChange(v) {
@@ -500,15 +586,115 @@
 				// 输入框的值
 				this.setHELLO_MSG();
 			},
-		
+			radioGptChange(v) {
+				this.sayModeValue = v.detail.value
+			},
+			bindImageSizeChange(e) {
+				this.imageSizeIndex = e.detail.value
+			},
+			bindImageNumChange(e) {
+				this.imageNumIndex = e.detail.value
+			},
+			savePosterPath(url) {
+				uni.downloadFile({
+					url,
+					success: (resFile) => {
+						console.log(resFile, "resFile");
+						if (resFile.statusCode === 200) {
+							uni.getSetting({
+								success: (res) => {
+									if (!res.authSetting["scope.writePhotosAlbum"]) {
+										uni.authorize({
+											scope: "scope.writePhotosAlbum",
+											success: () => {
+												uni.saveImageToPhotosAlbum({
+													filePath: resFile
+														.tempFilePath,
+													success: (res) => {
+														return uni
+															.showToast({
+																title: "保存成功！",
+															});
+													},
+													fail: (res) => {
+														return uni
+															.showToast({
+																title: res
+																	.errMsg,
+															});
+													},
+													complete: (res) => {},
+												});
+											},
+											fail: () => {
+												uni.showModal({
+													title: "您已拒绝获取相册权限",
+													content: "是否进入权限管理，调整授权？",
+													success: (res) => {
+														if (res.confirm) {
+															uni.openSetting({
+																success: (
+																	res
+																	) => {
+																	console
+																		.log(
+																			res
+																			.authSetting
+																			);
+																},
+															});
+														} else if (res
+															.cancel) {
+															return uni
+																.showToast({
+																	title: "已取消！",
+																});
+														}
+													},
+												});
+											},
+										});
+									} else {
+										uni.saveImageToPhotosAlbum({
+											filePath: resFile.tempFilePath,
+											success: (res) => {
+												return uni.showToast({
+													title: "保存成功！",
+												});
+											},
+											fail: (res) => {
+												return uni.showToast({
+													title: res.errMsg,
+												});
+											},
+											complete: (res) => {},
+										});
+									}
+								},
+								fail: (res) => {},
+							});
+						} else {
+							return uni.showToast({
+								title: resFile.errMsg,
+							});
+						}
+					},
+					fail: (res) => {
+						return uni.showToast({
+							title: res.errMsg,
+						});
+					},
+				});
+			},
 		}
 	}
 </script>
 
 <style>
-	.cu-chat .cu-item>.main .content::after{
+	.cu-chat .cu-item>.main .content::after {
 		z-index: 1;
 	}
+
 	.mybutton {
 		width: 200px;
 		height: 40px;
@@ -668,6 +854,7 @@
 	.fcbox {
 		gap: 20px;
 	}
+
 	.mytext {
 		display: -webkit-box;
 		/* 最多展示两行 */
