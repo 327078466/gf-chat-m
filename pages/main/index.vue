@@ -1,7 +1,7 @@
 <template>
 	<!-- 跳过审核 用于专门给审核人员看 -->
 	<view>
-		<view v-if="!isDevelop">
+		<view v-if="isDevelop">
 			<view class="login-content">
 				<view class="login-title">
 					文件查询
@@ -22,7 +22,7 @@
 				<button class="mybutton" @click="showMessage">点击我</button>
 			</view>
 		</view>
-		<view v-if="isDevelop">
+		<view v-if="!isDevelop">
 			<cu-custom bgColor="bg-cyan" :isBack="false">
 				<!-- 	<block slot="backText">返回</block> -->
 				<block slot="content">GF聊天</block>
@@ -190,8 +190,7 @@
 		type: 'msg',
 		my: false,
 		msg: '连接中，请稍后~',
-		date: dateFormat(new Date(), 'yyyy年MM月dd日 hh:mm'),
-		first: '1'
+		date: dateFormat(new Date(), 'yyyy年MM月dd日 hh:mm')
 	}
 	export default {
 		components: {
@@ -465,6 +464,17 @@
 			},
 			addHistory(item) {
 				if (item.type === 'msg') {
+					let chatHistory = this.$squni.getStorageSync('chatHistory')
+					if (!chatHistory) {
+						chatHistory = []
+					}
+					if (chatHistory.length >= 50) {
+						chatHistory.splice(0, 1)
+					}
+					chatHistory.push(item)
+					this.$squni.setStorageSync('chatHistory', chatHistory)
+				}
+				if (item.type === 'image') {
 					let chatHistory = this.$squni.getStorageSync('chatHistory')
 					if (!chatHistory) {
 						chatHistory = []

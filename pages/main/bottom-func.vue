@@ -33,7 +33,7 @@
 						<view class="flex justify-between align-center margin-top">
 							<view class="flex flex-direction align-start">
 								<view class="text-bold myfont">邀请新的小伙伴来体验</view>
-								<view class="padding-tb-xs myfont">奖励 30 次/人</view>
+								<view class="padding-tb-xs myfont">奖励 30 次/人，无次数上限</view>
 								<view class="text-xs text-gray myfont">提示：点击右上角···可分享给朋友进行邀请</view>
 							</view>
 							<view>
@@ -43,7 +43,7 @@
 						<view class="flex justify-between align-center margin-top">
 							<view class="flex flex-direction align-start">
 								<view class="text-bold padding-bottom-sm myfont">看视频广告攒次数</view>
-								<view class="myfont">奖励 30 次/个</view>
+								<view class="myfont">奖励 30 次/个，无次数上限</view>
 							</view>
 							<button class="cu-btn lines-cyan round" @click="$squni.toast('功能完善中，敬请期待~')">观看视频</button>
 						</view>
