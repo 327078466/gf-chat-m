@@ -1,7 +1,7 @@
 <template>
 	<!-- 跳过审核 用于专门给审核人员看 -->
 	<view>
-		<view v-if="isDevelop">
+		<view v-if="!isDevelop">
 			<view class="login-content">
 				<view class="login-title">
 					文件查询
@@ -22,7 +22,7 @@
 				<button class="mybutton" @click="showMessage">点击我</button>
 			</view>
 		</view>
-		<view v-if="!isDevelop">
+		<view v-if="isDevelop">
 			<cu-custom bgColor="bg-cyan" :isBack="false">
 				<!-- 	<block slot="backText">返回</block> -->
 				<block slot="content">GF聊天</block>
@@ -43,8 +43,7 @@
 							<view v-if="i === 0" class="date">{{ x.date }}</view>
 					</view>
 					<!-- AI消息 -->
-					<view v-if="!x.my" class="cu-item"
-						:class="[i === 0 ? 'first' : '', i === 1 ? 'sec' : '']">
+					<view v-if="!x.my" class="cu-item" :class="[i === 0 ? 'first' : '', i === 1 ? 'sec' : '']">
 						<view class="flex flex-direction align-center">
 							<image class="cu-avatar round chat-avatar"
 								:src="mode == '1' ? '../../static/M1.png' : '../../static/M2.png'">
@@ -54,8 +53,8 @@
 							<view class="content shadow" :class="{ 'hidden-pseudo-element': !isPseudoElementVisible }">
 								<text class="mytext" v-if="x.type == 'msg'"
 									@click="x.msg && $squni.copy(x.msg)">{{ x.msg }}</text>
-								<image v-if="x.type === 'image'" :src="x.msg"
-									@longtap="savePosterPath(x.msg)"></image>
+								<image v-if="x.type === 'image'" :src="x.msg" @longtap="savePosterPath(x.msg,false)"></image>
+								<video :src="x.msg" v-if="x.type === 'video'" @longtap="savePosterPath(x.msg,true)"></video>
 							</view>
 						</view>
 						<view @click="open" v-if="i === 0">
@@ -100,7 +99,7 @@
 						<text class="cuIcon-list text-cyan" style="font-size: 60upx;"></text>
 					</view>
 					<input v-model="msg" class="solid padding-lr" :adjust-position="false" :focus="false"
-						maxlength="1000" cursor-spacing="10" :placeholder="loading ? '正在思考中，请稍后~' : '您有什么问题，问什么都可以'"
+						maxlength="1000" cursor-spacing="10" :placeholder="loading ? '正在思考中，请稍后~' : inputMessage"
 						@focus="inputFocus" @blur="inputBlur" @confirm="sendMsg"></input>
 					<!-- <view class="action">
 							<text class="cuIcon-emojifill text-grey"></text>
@@ -118,14 +117,26 @@
 					@confirm="confirm(mode)">
 					<view style="background-color: #fff;padding: 15px;" class="box">
 						<radio-group @change="radioChange" style="padding-bottom: 25px;">
-							<view style="display: flex;flex-direction: row;gap: 50px;">
-								<view style="display: flex;gap: 10px;">
-									<text>对话</text>
-									<radio :value="1" :checked="mode=='1'"></radio>
+							<view style="display: flex;flex-direction: row;gap: 30px;">
+								<view>
+									<view style="display: flex;gap: 10px;padding-bottom: 15px;">
+										<text>AI聊天</text>
+										<radio :value="1" :checked="mode=='1'"></radio>
+									</view>
+									<view style="display: flex;gap: 10px;">
+										<text>AI绘画</text>
+										<radio :value="2" :checked="mode=='2'"></radio>
+									</view>
 								</view>
-								<view style="display: flex;gap: 10px;">
-									<text>作图</text>
-									<radio :value="2" :checked="mode=='2'"></radio>
+								<view>
+									<view style="display: flex;gap: 10px;padding-bottom: 15px;">
+										<text>视频解析</text>
+										<radio :value="3" :checked="mode=='3'"></radio>
+									</view>
+									<view style="display: flex;gap: 10px;">
+										<text>文字转录</text>
+										<radio :value="4" :checked="mode=='4'"></radio>
+									</view>
 								</view>
 							</view>
 						</radio-group>
@@ -214,7 +225,7 @@
 				type: 'top',
 				mode: "1",
 				sayModeValue: '1',
-				assistantName: '对话助理',
+				inputMessage: '',
 				assistantDetail: {
 					'id': '0'
 				},
@@ -236,7 +247,7 @@
 			loading(n, o) {
 				if (n !== o && !n) {
 					let last = this.msgList[this.msgList.length - 1]
-					console.log("插入记录",last)
+					console.log("插入记录", last)
 					if (!last.my) {
 						this.addHistory(last)
 					}
@@ -266,20 +277,7 @@
 			getUserChatAssetApi().then(res => {
 				this.chatAsset = res.data
 			})
-			try {
-				//建立socket连接
-				websocket.connectSocket(this.$config.wssUrl + '/tools/chat/user/' + this.userId + '/' + this.mode +
-					'/' + (this.mode == '1' ? this.sayModeValue + '/' + this.assistantDetail.id : this.imageNum[
-						this.imageNumIndex] + '/' + this.imageSize[this.imageSizeIndex]),
-					msg => {
-						this.recvMsg(msg)
-					}, () => {
-						//如果连接成功则发送心跳检测
-						this.heartBeatTest()
-					})
-			} catch (error) {
-				console.log('websocket connectSocket error:' + error)
-			}
+			this.connectWebsocket();
 		},
 		onHide() {
 			websocket.closeSocket()
@@ -298,6 +296,10 @@
 			sendMsg() {
 				if (this.msg == "") {
 					this.$squni.toast('请先输入您的问题哦')
+					return
+				}
+				if(this.mode == '4'){
+					this.$squni.toast('正在开发中敬请期待～')
 					return
 				}
 				let msg = this.msg
@@ -320,14 +322,39 @@
 			},
 			setHELLO_MSG() {
 				if (this.mode == '1') {
-					this.assistantName = '对话助理'
+					HELLO_MSG.msg = '我是您的聊天助手,可以帮您解答疑难困惑'
+					this.inputMessage = '您有什么问题，问什么都可以'
 				} else if (this.mode == '2') {
-					this.assistantName = '作图助理'
+					HELLO_MSG.msg = '我是您的绘画助手,可以描述场景的关键词，帮您绘画'
+					this.inputMessage = '请告诉我您的需求哦～'
+				} else if (this.mode == '3') {
+					HELLO_MSG.msg = '我是您的视频解析助手,支持抖音,快手,皮皮虾,火山,小红书,西瓜等等等等 主流视频都可以 ～'
+					this.inputMessage = '短视频链接都复制到这里哦～'
+				} else if (this.mode == '4') {
+					HELLO_MSG.msg = '我是您的文字转录助手,编辑好的文案发我哦，让我来给您朗读～'
+					this.inputMessage = '告诉我您的文章哦～'
 				}
-				if (this.assistantDetail.id == '0') {
-					HELLO_MSG.msg = '我是您的' + this.assistantName + ',可以帮您解答疑难困惑'
-				} else {
-					HELLO_MSG.msg = '我是您的' + this.assistantName + ',可以帮您解答疑难困惑' + '[提示词:' + this.assistantDetail.name + ']'
+				if (this.mode == '1' && this.assistantDetail.id != '0') {
+					HELLO_MSG.msg = '我是您的聊天助手,可以帮您解答疑难困惑' + '[提示词:' + this.assistantDetail.name + ']'
+				}
+			},
+			connectWebsocket() {
+				try {
+					//建立socket连接
+					websocket.connectSocket(this.$config.wssUrl + '/tools/chat/user/' + this.userId + '/' + this.mode +
+						'/' + (this.mode == '1' ? this.sayModeValue + '/' + this.assistantDetail.id :
+							this.mode == '2' ? this.imageNum[this.imageNumIndex] + '/' + this.imageSize[this
+								.imageSizeIndex] :
+							this.mode == '3' ? '0' + '/' + '0' :
+							this.mode == '4' ? '0' + '/' + '0' : ''),
+						msg => {
+							this.recvMsg(msg)
+						}, () => {
+							//如果连接成功则发送心跳检测
+							this.heartBeatTest()
+						})
+				} catch (error) {
+					console.log('websocket connectSocket error:' + error)
 				}
 			},
 			recvMsg(msg) {
@@ -336,13 +363,6 @@
 					this.putMsgError('机器人开小差了，请稍后再试~')
 					return
 				}
-				// 发送消息
-				// 1+1
-				// 收到消息
-				// {"role":"assistant","content":null}
-				// {"role":null,"content":"2"}
-				// {"role":null,"content":null}
-				// [DONE]
 				if (this.mode == '1') {
 					if (msg === '[DONE]') {
 						this.loading = false
@@ -371,24 +391,42 @@
 							this.putMsgError(msg)
 						}
 					}
-				} else { // 作图
-					console.log(msg)
+				} else if (this.mode == '2') { // 作图
 					if (msg === '[DONE]') {
 						this.loading = false
 					} else {
 						try {
 							let msgJson = JSON.parse(msg)
 							if (msgJson.role === 'assistant') {
-								console.log("assistant",msg)
-								this.putMsg('', false,'image')
+								this.putMsg('', false, 'image')
 							} else if (msgJson.role == null && msgJson.content) {
 								this.msgList[this.msgList.length - 1].msg += msgJson.content
 								scrollToBottom()
-															}
+							}
 						} catch (error) {
 							this.putMsgError(msg)
 						}
 					}
+				} else if (this.mode == '3') { // 视频解析
+					if (msg === '[DONE]') {
+						this.loading = false
+					} else {
+						try {
+							let msgJson = JSON.parse(msg)
+							if (msgJson.role === 'assistant') {
+								console.log(msg)
+								this.putMsg('视频文案:' + msgJson.content, false, 'msg') // title
+								this.putMsg('', false, 'video')
+							} else if (msgJson.role == null && msgJson.content) {
+								this.msgList[this.msgList.length - 1].msg += msgJson.content
+								scrollToBottom()
+							}
+						} catch (error) {
+							this.putMsgError(msg)
+						}
+					}
+				} else if (this.mode == '4') { // 文字转录
+
 				}
 			},
 			sendMsgBak() {
@@ -397,14 +435,17 @@
 					return
 				}
 				this.msgContent += (this.userId + ":" + this.msg + "\n")
-				if(this.mode == '1'){
-					console.log("这是我的对话回掉")
+				if (this.mode == '1') {
 					this.putMsg(this.msg, true)
-				}else{
-					console.log("这是我的图片回掉")
-					this.putMsg(this.msg, true,'image')
+				} else if(this.mode == '2'){
+					this.putMsg(this.msg, true, 'image')
+				}else if(this.mode == '3'){
+					this.putMsg(this.msg, true, 'video')
+				}else if(this.mode == '4'){
+					// 录音待开发
 				}
-				
+
+
 				this.loading = true
 
 				// ======== 开发环境模拟回复 ========
@@ -451,7 +492,7 @@
 				scrollToBottom()
 				if (my) {
 					this.addHistory(item)
-					console.log("item",item)
+					console.log("item", item)
 					// 清除消息
 					this.msg = ''
 					this.msgReply = ''
@@ -463,28 +504,17 @@
 				this.loading = false
 			},
 			addHistory(item) {
-				if (item.type === 'msg') {
-					let chatHistory = this.$squni.getStorageSync('chatHistory')
-					if (!chatHistory) {
-						chatHistory = []
-					}
-					if (chatHistory.length >= 50) {
-						chatHistory.splice(0, 1)
-					}
-					chatHistory.push(item)
-					this.$squni.setStorageSync('chatHistory', chatHistory)
+				// if (item.type === 'msg') {
+				let chatHistory = this.$squni.getStorageSync('chatHistory')
+				if (!chatHistory) {
+					chatHistory = []
 				}
-				if (item.type === 'image') {
-					let chatHistory = this.$squni.getStorageSync('chatHistory')
-					if (!chatHistory) {
-						chatHistory = []
-					}
-					if (chatHistory.length >= 50) {
-						chatHistory.splice(0, 1)
-					}
-					chatHistory.push(item)
-					this.$squni.setStorageSync('chatHistory', chatHistory)
+				if (chatHistory.length >= 50) {
+					chatHistory.splice(0, 1)
 				}
+				chatHistory.push(item)
+				this.$squni.setStorageSync('chatHistory', chatHistory)
+				// }
 			},
 			//心跳检测
 			heartBeatTest() {
@@ -564,20 +594,7 @@
 				this.$squni.setStorageSync('mode', value)
 				this.mode = this.$squni.getStorageSync('mode')
 				// 重新连接
-				try {
-					//建立socket连接
-					websocket.connectSocket(this.$config.wssUrl + '/tools/chat/user/' + this.userId + '/' + this.mode +
-						'/' + (this.mode == '1' ? this.sayModeValue + '/' + this.assistantDetail.id : this.imageNum[
-							this.imageNumIndex] + '/' + this.imageSize[this.imageSizeIndex]),
-						msg => {
-							this.recvMsg(msg)
-						}, () => {
-							//如果连接成功则发送心跳检测
-							this.heartBeatTest()
-						})
-				} catch (error) {
-					console.log('websocket connectSocket error:' + error)
-				}
+				this.connectWebsocket();
 				this.mode = this.$squni.getStorageSync('mode')
 				// 输入框的值
 
@@ -586,9 +603,12 @@
 				this.$refs.popup.close()
 				if (this.mode == '1' && this.sayModeValue == '2') {
 					this.$squni.toast('GPT4.0功能更加丰富~')
-				}
-				if (this.mode == '2') {
+				}else if (this.mode == '2') {
 					this.$squni.toast('作图功能很强大哦~')
+				}else if (this.mode == '3') {
+					this.$squni.toast('主流视频平台都可以哦~')
+				}else if(this.mode == '4'){
+					this.$squni.toast('正在开发中敬请期待～')
 				}
 			},
 			radioChange(v) {
@@ -605,96 +625,118 @@
 			bindImageNumChange(e) {
 				this.imageNumIndex = e.detail.value
 			},
-			savePosterPath(url) {
-				uni.downloadFile({
-					url,
-					success: (resFile) => {
-						console.log(resFile, "resFile");
-						if (resFile.statusCode === 200) {
-							uni.getSetting({
-								success: (res) => {
-									if (!res.authSetting["scope.writePhotosAlbum"]) {
-										uni.authorize({
-											scope: "scope.writePhotosAlbum",
-											success: () => {
-												uni.saveImageToPhotosAlbum({
-													filePath: resFile
-														.tempFilePath,
-													success: (res) => {
-														return uni
-															.showToast({
-																title: "保存成功！",
-															});
-													},
-													fail: (res) => {
-														return uni
-															.showToast({
-																title: res
-																	.errMsg,
-															});
-													},
-													complete: (res) => {},
-												});
-											},
-											fail: () => {
-												uni.showModal({
-													title: "您已拒绝获取相册权限",
-													content: "是否进入权限管理，调整授权？",
-													success: (res) => {
-														if (res.confirm) {
-															uni.openSetting({
-																success: (
-																	res
-																	) => {
-																	console
-																		.log(
-																			res
-																			.authSetting
-																			);
-																},
-															});
-														} else if (res
-															.cancel) {
-															return uni
-																.showToast({
-																	title: "已取消！",
-																});
-														}
-													},
-												});
-											},
-										});
-									} else {
-										uni.saveImageToPhotosAlbum({
-											filePath: resFile.tempFilePath,
-											success: (res) => {
-												return uni.showToast({
-													title: "保存成功！",
-												});
-											},
-											fail: (res) => {
-												return uni.showToast({
-													title: res.errMsg,
-												});
-											},
-											complete: (res) => {},
-										});
-									}
-								},
-								fail: (res) => {},
-							});
-						} else {
-							return uni.showToast({
-								title: resFile.errMsg,
-							});
-						}
-					},
-					fail: (res) => {
-						return uni.showToast({
-							title: res.errMsg,
-						});
-					},
-				});
+			savePosterPath(url, isVideo) {
+			    uni.downloadFile({
+			        url,
+			        success: (resFile) => {
+			            console.log(resFile, "resFile");
+			            if (resFile.statusCode === 200) {
+			                uni.getSetting({
+			                    success: (res) => {
+			                        if (!res.authSetting["scope.writePhotosAlbum"]) {
+			                            uni.authorize({
+			                                scope: "scope.writePhotosAlbum",
+			                                success: () => {
+			                                    if (isVideo) {
+			                                        uni.saveVideoToPhotosAlbum({
+			                                            filePath: resFile.tempFilePath,
+			                                            success: (res) => {
+			                                                return uni.showToast({
+			                                                    title: "保存成功！",
+			                                                });
+			                                            },
+			                                            fail: (res) => {
+			                                                return uni.showToast({
+			                                                    title: res.errMsg,
+			                                                });
+			                                            },
+			                                            complete: (res) => {},
+			                                        });
+			                                    } else {
+			                                        uni.saveImageToPhotosAlbum({
+			                                            filePath: resFile.tempFilePath,
+			                                            success: (res) => {
+			                                                return uni.showToast({
+			                                                    title: "保存成功！",
+			                                                });
+			                                            },
+			                                            fail: (res) => {
+			                                                return uni.showToast({
+			                                                    title: res.errMsg,
+			                                                });
+			                                            },
+			                                            complete: (res) => {},
+			                                        });
+			                                    }
+			                                },
+			                                fail: () => {
+			                                    uni.showModal({
+			                                        title: "您已拒绝获取相册权限",
+			                                        content: "是否进入权限管理，调整授权？",
+			                                        success: (res) => {
+			                                            if (res.confirm) {
+			                                                uni.openSetting({
+			                                                    success: (res) => {
+			                                                        console.log(res.authSetting);
+			                                                    },
+			                                                });
+			                                            } else if (res.cancel) {
+			                                                return uni.showToast({
+			                                                    title: "已取消！",
+			                                                });
+			                                            }
+			                                        },
+			                                    });
+			                                },
+			                            });
+			                        } else {
+			                            if (isVideo) {
+			                                uni.saveVideoToPhotosAlbum({
+			                                    filePath: resFile.tempFilePath,
+			                                    success: (res) => {
+			                                        return uni.showToast({
+			                                            title: "保存成功！",
+			                                        });
+			                                    },
+			                                    fail: (res) => {
+			                                        return uni.showToast({
+			                                            title: res.errMsg,
+			                                        });
+			                                    },
+			                                    complete: (res) => {},
+			                                });
+			                            } else {
+			                                uni.saveImageToPhotosAlbum({
+			                                    filePath: resFile.tempFilePath,
+			                                    success: (res) => {
+			                                        return uni.showToast({
+			                                            title: "保存成功！",
+			                                        });
+			                                    },
+			                                    fail: (res) => {
+			                                        return uni.showToast({
+			                                            title: res.errMsg,
+			                                        });
+			                                    },
+			                                    complete: (res) => {},
+			                                });
+			                            }
+			                        }
+			                    },
+			                    fail: (res) => {},
+			                });
+			            } else {
+			                return uni.showToast({
+			                    title: resFile.errMsg,
+			                });
+			            }
+			        },
+			        fail: (res) => {
+			            return uni.showToast({
+			                title: res.errMsg,
+			            });
+			        },
+			    });
 			},
 		}
 	}

@@ -1,6 +1,6 @@
 const env = process.env
-// const dev = process.env.NODE_ENV === 'development'
-const dev = process.env.NODE_ENV === 'prod'
+const dev = process.env.NODE_ENV === 'development'
+// const dev = process.env.NODE_ENV === 'prod'
 // 改成自己的IP
 const baseUrl = dev ? 'http://localhost:6501/api' : 'https://weixin.cwph.cn/api'
 const wssUrl = dev ? 'ws://localhost:6501/api' : 'wss://weixin.cwph.cn/api'

@@ -48,7 +48,9 @@
 									<text v-if="x.type === 'msg'"
 										@click="x.msg && $squni.copy(x.msg)">{{ x.msg }}</text>
 									<image v-if="x.type === 'image'" :src="x.msg"
-										@longtap="savePosterPath(x.msg)"></image>
+										@longtap="savePosterPath(x.msg,false)"></image>
+										<video :src="x.msg" v-if="x.type === 'video'" @longtap="savePosterPath(x.msg,true)"></video>
+										
 								</view>
 							</view>
 							<view v-if="i === 0" class="date">{{ x.date }}</view>
@@ -79,96 +81,118 @@
 			this.msgList = this.$squni.getStorageSync('chatHistory') || []
 		},
 		methods: {
-			savePosterPath(url) {
-				uni.downloadFile({
-					url,
-					success: (resFile) => {
-						console.log(resFile, "resFile");
-						if (resFile.statusCode === 200) {
-							uni.getSetting({
-								success: (res) => {
-									if (!res.authSetting["scope.writePhotosAlbum"]) {
-										uni.authorize({
-											scope: "scope.writePhotosAlbum",
-											success: () => {
-												uni.saveImageToPhotosAlbum({
-													filePath: resFile
-														.tempFilePath,
-													success: (res) => {
-														return uni
-															.showToast({
-																title: "保存成功！",
-															});
-													},
-													fail: (res) => {
-														return uni
-															.showToast({
-																title: res
-																	.errMsg,
-															});
-													},
-													complete: (res) => {},
-												});
-											},
-											fail: () => {
-												uni.showModal({
-													title: "您已拒绝获取相册权限",
-													content: "是否进入权限管理，调整授权？",
-													success: (res) => {
-														if (res.confirm) {
-															uni.openSetting({
-																success: (
-																	res
-																) => {
-																	console
-																		.log(
-																			res
-																			.authSetting
-																		);
-																},
-															});
-														} else if (res
-															.cancel) {
-															return uni
-																.showToast({
-																	title: "已取消！",
-																});
-														}
-													},
-												});
-											},
-										});
-									} else {
-										uni.saveImageToPhotosAlbum({
-											filePath: resFile.tempFilePath,
-											success: (res) => {
-												return uni.showToast({
-													title: "保存成功！",
-												});
-											},
-											fail: (res) => {
-												return uni.showToast({
-													title: res.errMsg,
-												});
-											},
-											complete: (res) => {},
-										});
-									}
-								},
-								fail: (res) => {},
-							});
-						} else {
-							return uni.showToast({
-								title: resFile.errMsg,
-							});
-						}
-					},
-					fail: (res) => {
-						return uni.showToast({
-							title: res.errMsg,
-						});
-					},
-				});
+			savePosterPath(url, isVideo) {
+			    uni.downloadFile({
+			        url,
+			        success: (resFile) => {
+			            console.log(resFile, "resFile");
+			            if (resFile.statusCode === 200) {
+			                uni.getSetting({
+			                    success: (res) => {
+			                        if (!res.authSetting["scope.writePhotosAlbum"]) {
+			                            uni.authorize({
+			                                scope: "scope.writePhotosAlbum",
+			                                success: () => {
+			                                    if (isVideo) {
+			                                        uni.saveVideoToPhotosAlbum({
+			                                            filePath: resFile.tempFilePath,
+			                                            success: (res) => {
+			                                                return uni.showToast({
+			                                                    title: "保存成功！",
+			                                                });
+			                                            },
+			                                            fail: (res) => {
+			                                                return uni.showToast({
+			                                                    title: res.errMsg,
+			                                                });
+			                                            },
+			                                            complete: (res) => {},
+			                                        });
+			                                    } else {
+			                                        uni.saveImageToPhotosAlbum({
+			                                            filePath: resFile.tempFilePath,
+			                                            success: (res) => {
+			                                                return uni.showToast({
+			                                                    title: "保存成功！",
+			                                                });
+			                                            },
+			                                            fail: (res) => {
+			                                                return uni.showToast({
+			                                                    title: res.errMsg,
+			                                                });
+			                                            },
+			                                            complete: (res) => {},
+			                                        });
+			                                    }
+			                                },
+			                                fail: () => {
+			                                    uni.showModal({
+			                                        title: "您已拒绝获取相册权限",
+			                                        content: "是否进入权限管理，调整授权？",
+			                                        success: (res) => {
+			                                            if (res.confirm) {
+			                                                uni.openSetting({
+			                                                    success: (res) => {
+			                                                        console.log(res.authSetting);
+			                                                    },
+			                                                });
+			                                            } else if (res.cancel) {
+			                                                return uni.showToast({
+			                                                    title: "已取消！",
+			                                                });
+			                                            }
+			                                        },
+			                                    });
+			                                },
+			                            });
+			                        } else {
+			                            if (isVideo) {
+			                                uni.saveVideoToPhotosAlbum({
+			                                    filePath: resFile.tempFilePath,
+			                                    success: (res) => {
+			                                        return uni.showToast({
+			                                            title: "保存成功！",
+			                                        });
+			                                    },
+			                                    fail: (res) => {
+			                                        return uni.showToast({
+			                                            title: res.errMsg,
+			                                        });
+			                                    },
+			                                    complete: (res) => {},
+			                                });
+			                            } else {
+			                                uni.saveImageToPhotosAlbum({
+			                                    filePath: resFile.tempFilePath,
+			                                    success: (res) => {
+			                                        return uni.showToast({
+			                                            title: "保存成功！",
+			                                        });
+			                                    },
+			                                    fail: (res) => {
+			                                        return uni.showToast({
+			                                            title: res.errMsg,
+			                                        });
+			                                    },
+			                                    complete: (res) => {},
+			                                });
+			                            }
+			                        }
+			                    },
+			                    fail: (res) => {},
+			                });
+			            } else {
+			                return uni.showToast({
+			                    title: resFile.errMsg,
+			                });
+			            }
+			        },
+			        fail: (res) => {
+			            return uni.showToast({
+			                title: res.errMsg,
+			            });
+			        },
+			    });
 			},
 		}
 	}
