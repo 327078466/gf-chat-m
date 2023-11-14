@@ -46,7 +46,7 @@
 					<view v-if="!x.my" class="cu-item" :class="[i === 0 ? 'first' : '', i === 1 ? 'sec' : '']">
 						<view class="flex flex-direction align-center">
 							<image class="cu-avatar round chat-avatar"
-								:src="mode == '1' ? '../../static/M1.png' : '../../static/M2.png'">
+								:src="mode == '1' ? '../../static/M1.png' : mode == '2' ? '../../static/M2.png':mode == '3'? '../../static/M3.png':'' ">
 								<text v-if="i === 0" class="cuIcon-title" :class="[statusColor]"></text>
 						</view>
 						<view class="main" style="display: flex;flex-direction: row;">
@@ -140,7 +140,7 @@
 								</view>
 							</view>
 						</radio-group>
-						<radio-group @change="radioGptChange" style="padding-bottom: 25px;">
+						<radio-group @change="radioGptChange" style="padding-bottom: 25px;padding-left: 25px;">
 							<view v-if="mode=='1'">
 								<view class="box2">
 									<text>GPT3.5</text>
@@ -325,10 +325,10 @@
 					HELLO_MSG.msg = '我是您的聊天助手,可以帮您解答疑难困惑'
 					this.inputMessage = '您有什么问题，问什么都可以'
 				} else if (this.mode == '2') {
-					HELLO_MSG.msg = '我是您的绘画助手,可以描述场景的关键词，帮您绘画'
+					HELLO_MSG.msg = '我是您的绘画助手,可以描述场景的关键词，帮您绘画，长按可以下载哦'
 					this.inputMessage = '请告诉我您的需求哦～'
 				} else if (this.mode == '3') {
-					HELLO_MSG.msg = '我是您的视频解析助手,支持抖音,快手,皮皮虾,火山,小红书,西瓜等等等等 主流视频都可以 ～'
+					HELLO_MSG.msg = '我是您的视频解析助手,支持抖音,快手,西瓜等等 长按可以下载哦 ～'
 					this.inputMessage = '短视频链接都复制到这里哦～'
 				} else if (this.mode == '4') {
 					HELLO_MSG.msg = '我是您的文字转录助手,编辑好的文案发我哦，让我来给您朗读～'
