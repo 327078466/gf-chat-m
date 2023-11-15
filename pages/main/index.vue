@@ -1,7 +1,7 @@
 <template>
 	<!-- 跳过审核 用于专门给审核人员看 -->
 	<view>
-		<view v-if="!isDevelop">
+		<view v-if="isDevelop">
 			<view class="login-content">
 				<view class="login-title">
 					文件查询
@@ -22,7 +22,7 @@
 				<button class="mybutton" @click="showMessage">点击我</button>
 			</view>
 		</view>
-		<view v-if="isDevelop">
+		<view v-if="!isDevelop">
 			<cu-custom bgColor="bg-cyan" :isBack="false">
 				<!-- 	<block slot="backText">返回</block> -->
 				<block slot="content">GF聊天</block>
@@ -288,7 +288,7 @@
 				const data = JSON.parse(decodeURIComponent(option.data));
 				this.assistantDetail = data;
 			} else {
-				this.$refs.popup.open()
+				this.open()
 			}
 		},
 
@@ -363,70 +363,66 @@
 					this.putMsgError('机器人开小差了，请稍后再试~')
 					return
 				}
-				if (this.mode == '1') {
-					if (msg === '[DONE]') {
-						this.loading = false
-					} else {
-						try {
-							let msgJson = JSON.parse(msg)
-							if (msgJson.role === 'sqchat') {
-								let content = msgJson.content
-								if (msgJson.codeKey) {
-									content += `[${msgJson.codeKey}]`
-									if (msgJson.codeKey === 'chat.asset_short') {
-										this.openBottomFunc()
-									} else if (msgJson.codeKey.indexOf('chat.asset_') >= 0) {
-										this.chatAsset[this.assetType]++
+				if (msg === '[DONE]') {
+					this.loading = false
+				} else if(msg === 'sensitive'){
+					this.putMsgError("请求中出现敏感词，请重新输入")
+					this.loading = false
+				}else{
+					if (this.mode == '1') {
+							try {
+								let msgJson = JSON.parse(msg)
+								if (msgJson.role === 'sqchat') {
+									let content = msgJson.content
+									if (msgJson.codeKey) {
+										content += `[${msgJson.codeKey}]`
+										if (msgJson.codeKey === 'chat.asset_short') {
+											this.openBottomFunc()
+										} else if (msgJson.codeKey.indexOf('chat.asset_') >= 0) {
+											this.chatAsset[this.assetType]++
+										}
 									}
+									this.putMsgError(content)
 								}
-								this.putMsgError(content)
+								if (msgJson.role === 'assistant') {
+									this.putMsg('', false)
+								} else if (msgJson.role == null && msgJson.content) {
+									this.msgList[this.msgList.length - 1].msg += msgJson.content
+									scrollToBottom()
+								}
+							} catch (error) {
+								this.putMsgError(msg)
 							}
-							if (msgJson.role === 'assistant') {
-								this.putMsg('', false)
-							} else if (msgJson.role == null && msgJson.content) {
-								this.msgList[this.msgList.length - 1].msg += msgJson.content
-								scrollToBottom()
+					} else if (this.mode == '2') { // 作图
+							try {
+								let msgJson = JSON.parse(msg)
+								if (msgJson.role === 'assistant') {
+									this.putMsg('', false, 'image')
+								} else if (msgJson.role == null && msgJson.content) {
+									this.msgList[this.msgList.length - 1].msg += msgJson.content
+									scrollToBottom()
+								}
+							} catch (error) {
+								this.putMsgError(msg)
 							}
-						} catch (error) {
-							this.putMsgError(msg)
-						}
+					} else if (this.mode == '3') { // 视频解析
+							try {
+								let msgJson = JSON.parse(msg)
+								if (msgJson.role === 'assistant') {
+									console.log(msg)
+									this.putMsg('视频文案:' + msgJson.content, false, 'msg') // title
+									this.putMsg('', false, 'video')
+								} else if (msgJson.role == null && msgJson.content) {
+									this.msgList[this.msgList.length - 1].msg += msgJson.content
+									scrollToBottom()
+								}
+							} catch (error) {
+								this.putMsgError(msg)
+							}
+					} else if (this.mode == '4') { // 文字转录
+					
 					}
-				} else if (this.mode == '2') { // 作图
-					if (msg === '[DONE]') {
-						this.loading = false
-					} else {
-						try {
-							let msgJson = JSON.parse(msg)
-							if (msgJson.role === 'assistant') {
-								this.putMsg('', false, 'image')
-							} else if (msgJson.role == null && msgJson.content) {
-								this.msgList[this.msgList.length - 1].msg += msgJson.content
-								scrollToBottom()
-							}
-						} catch (error) {
-							this.putMsgError(msg)
-						}
-					}
-				} else if (this.mode == '3') { // 视频解析
-					if (msg === '[DONE]') {
-						this.loading = false
-					} else {
-						try {
-							let msgJson = JSON.parse(msg)
-							if (msgJson.role === 'assistant') {
-								console.log(msg)
-								this.putMsg('视频文案:' + msgJson.content, false, 'msg') // title
-								this.putMsg('', false, 'video')
-							} else if (msgJson.role == null && msgJson.content) {
-								this.msgList[this.msgList.length - 1].msg += msgJson.content
-								scrollToBottom()
-							}
-						} catch (error) {
-							this.putMsgError(msg)
-						}
-					}
-				} else if (this.mode == '4') { // 文字转录
-
+					this.loading = false
 				}
 			},
 			sendMsgBak() {
@@ -444,8 +440,6 @@
 				}else if(this.mode == '4'){
 					// 录音待开发
 				}
-
-
 				this.loading = true
 
 				// ======== 开发环境模拟回复 ========
@@ -574,6 +568,8 @@
 				this.$squni.toast('清理完成~')
 			},
 			open() {
+				this.msgLoading = true
+				this.loading = true
 				this.$refs.popup.open()
 			},
 			/**
@@ -581,6 +577,8 @@
 			 * @param {Object} done
 			 */
 			close() {
+				this.msgLoading = false
+				this.loading = false
 				this.mode = this.$squni.getStorageSync('mode')
 				this.$refs.popup.close()
 				this.setHELLO_MSG();
@@ -591,11 +589,12 @@
 			 * @param {Object} value
 			 */
 			confirm(value) {
+				this.msgLoading = false
+				this.loading = false
 				this.$squni.setStorageSync('mode', value)
 				this.mode = this.$squni.getStorageSync('mode')
 				// 重新连接
 				this.connectWebsocket();
-				this.mode = this.$squni.getStorageSync('mode')
 				// 输入框的值
 
 				// TODO 做一些其他的事情，手动执行 close 才会关闭对话框
@@ -618,6 +617,7 @@
 			},
 			radioGptChange(v) {
 				this.sayModeValue = v.detail.value
+				console.log('this.sayModeValue',this.sayModeValue)
 			},
 			bindImageSizeChange(e) {
 				this.imageSizeIndex = e.detail.value
