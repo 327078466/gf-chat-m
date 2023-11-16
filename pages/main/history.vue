@@ -29,11 +29,16 @@
 			<view class="cu-chat">
 				<block v-for="(x,i) in msgList" :key="i">
 					<!-- 用户消息 -->
-					<view v-if="x.my && x.type === 'msg'" class="cu-item self"
+					<view v-if="x.my" class="cu-item self"
 						:class="[i === 0 ? 'first' : '', i === 1 ? 'sec' : '']">
 						<view class="main">
 							<view class="content bg-cyan shadow" @click="x.msg && $squni.copy(x.msg)">
-								<text>{{ x.msg }}</text>
+								<text class="mytext" v-if="x.type == 'msg'"
+									@click="x.msg && $squni.copy(x.msg)">{{ x.msg }}</text>
+								<image v-if="x.type === 'image'" :src="x.msg" @longtap="savePosterPath(x.msg,false)">
+								</image>
+								<video :src="x.msg" v-if="x.type === 'video'"
+									@longtap="savePosterPath(x.msg,true)"></video>
 							</view>
 						</view>
 						<image class="cu-avatar round" src="/static/answer.png">

@@ -30,13 +30,17 @@
 			<view class="cu-chat">
 				<block v-for="(x,i) in msgList" :key="i">
 					<!-- 用户消息 -->
-					<view v-if="x.my && x.type === 'msg'" class="cu-item self"
-						:class="[i === 0 ? 'first' : '', i === 1 ? 'sec' : '']">
+					<view v-if="x.my" class="cu-item self" :class="[i === 0 ? 'first' : '', i === 1 ? 'sec' : '']">
 						<view class="main">
 							<view class="content bg-cyan shadow"
 								:class="{ 'hidden-pseudo-element': !isPseudoElementVisible }"
 								@click="x.msg && $squni.copy(x.msg)">
-								<text class="mytext">{{ x.msg }}</text>
+								<text class="mytext" v-if="x.type == 'msg'"
+									@click="x.msg && $squni.copy(x.msg)">{{ x.msg }}</text>
+								<image v-if="x.type === 'image'" :src="x.msg" @longtap="savePosterPath(x.msg,false)">
+								</image>
+								<video :src="x.msg" v-if="x.type === 'video'"
+									@longtap="savePosterPath(x.msg,true)"></video>
 							</view>
 						</view>
 						<image class="cu-avatar round" :src="'../../static/answer.png'">
@@ -53,8 +57,10 @@
 							<view class="content shadow" :class="{ 'hidden-pseudo-element': !isPseudoElementVisible }">
 								<text class="mytext" v-if="x.type == 'msg'"
 									@click="x.msg && $squni.copy(x.msg)">{{ x.msg }}</text>
-								<image v-if="x.type === 'image'" :src="x.msg" @longtap="savePosterPath(x.msg,false)"></image>
-								<video :src="x.msg" v-if="x.type === 'video'" @longtap="savePosterPath(x.msg,true)"></video>
+								<image v-if="x.type === 'image'" :src="x.msg" @longtap="savePosterPath(x.msg,false)">
+								</image>
+								<video :src="x.msg" v-if="x.type === 'video'"
+									@longtap="savePosterPath(x.msg,true)"></video>
 							</view>
 						</view>
 						<view @click="open" v-if="i === 0">
@@ -101,9 +107,9 @@
 					<input v-model="msg" class="solid padding-lr" :adjust-position="false" :focus="false"
 						maxlength="1000" cursor-spacing="10" :placeholder="loading ? '正在思考中，请稍后~' : inputMessage"
 						@focus="inputFocus" @blur="inputBlur" @confirm="sendMsg"></input>
-						<view class="action" v-if="(mode =='5' || mode == '6') && selectimageIsShow">
-							<text class="cuIcon-upload text-grey" @click="selectPicture"></text>
-						</view>
+					<view class="action" v-if="(mode =='5' || mode == '6')">
+						<text class="cuIcon-upload text-grey" @click="selectPicture"></text>
+					</view>
 					<button class="cu-btn bg-cyan shadow" :disabled="loading" @click="sendMsg">
 						<text class="cuIcon-loading2 cuIconfont-spin"
 							v-if="loading || !ready"></text>{{ !ready ? '连接中' : '发送' }}
@@ -119,11 +125,11 @@
 						<radio-group @change="radioChange">
 							<view style="display: flex;flex-direction: column;">
 								<view style="display: flex;flex-direction: row;gap: 36px;">
-									<view style="display: flex;gap: 20px;padding-bottom: 15px;">
+									<view style="display: flex;gap: 22px;padding-bottom: 15px;">
 										<text>AI聊天</text>
 										<radio :value="1" :checked="mode=='1'"></radio>
 									</view>
-									<view style="display: flex;gap: 10px;padding-bottom: 15px;">
+									<view style="display: flex;gap: 12px;padding-bottom: 15px;">
 										<text>AI绘画</text>
 										<radio :value="2" :checked="mode=='2'"></radio>
 									</view>
@@ -143,7 +149,7 @@
 										<text>证件照</text>
 										<radio :value="5" :checked="mode=='5'"></radio>
 									</view>
-									<view style="display: flex;gap: 10px;padding-bottom: 15px;">
+									<view style="display: flex;gap: 9px;padding-bottom: 15px;">
 										<text>个性二维码</text>
 										<radio :value="6" :checked="mode=='6'"></radio>
 									</view>
@@ -208,7 +214,7 @@
 		uploadOssFile,
 	} from '@/api/chat.js'
 	import BottomFunc from './bottom-func'
-	import baseUrl  from  '@/common/config.js'
+	import baseUrl from '@/common/config.js'
 	const HELLO_MSG = {
 		type: 'msg',
 		my: false,
@@ -245,10 +251,7 @@
 				imageSize: ['256*256', '512*512', '1024*1024'],
 				imageSizeIndex: 0,
 				imageNumIndex: 0,
-				imageList: [], // 反显图片集合
-				cusNo: '', // 客户号
-				selectimageIsShow: true, // 添加图片功能按钮默认显示
-				accessToken: '',
+				imageFile: '0',
 			}
 		},
 		computed: {
@@ -263,7 +266,6 @@
 			loading(n, o) {
 				if (n !== o && !n) {
 					let last = this.msgList[this.msgList.length - 1]
-					console.log("插入记录", last)
 					if (!last.my) {
 						this.addHistory(last)
 					}
@@ -293,7 +295,6 @@
 			getUserChatAssetApi().then(res => {
 				this.chatAsset = res.data
 			})
-			console.log("开始链接")
 			this.connectWebsocket();
 		},
 		onHide() {
@@ -315,7 +316,7 @@
 					this.$squni.toast('请先输入您的问题哦')
 					return
 				}
-				if(this.mode == '4' || this.mode == '5'|| this.mode == '6'){
+				if (this.mode == '4' || this.mode == '6') {
 					this.$squni.toast('正在开发中敬请期待～')
 					return
 				}
@@ -350,10 +351,10 @@
 				} else if (this.mode == '4') {
 					HELLO_MSG.msg = '我是您的文字转录助手,编辑好的文案发我哦，让我来给您朗读～'
 					this.inputMessage = '告诉我您的文章哦～'
-				}else if (this.mode == '5') {
+				} else if (this.mode == '5') {
 					HELLO_MSG.msg = '我是您的证件照转化助手，可以将您的证件照快速换底色哦～'
 					this.inputMessage = '告诉我您需要怎样转换呢～'
-				}else if (this.mode == '6') {
+				} else if (this.mode == '6') {
 					HELLO_MSG.msg = '我是您的个性二维码助手，我可以将您需要整合的图片和二维码融合成个性二维码哦～'
 					this.inputMessage = '告诉我您需要怎么融合呢～'
 				}
@@ -369,7 +370,9 @@
 							this.mode == '2' ? this.imageNum[this.imageNumIndex] + '/' + this.imageSize[this
 								.imageSizeIndex] :
 							this.mode == '3' ? '0' + '/' + '0' :
-							this.mode == '4' ? '0' + '/' + '0' : this.mode == '5' ? '0' + '/' + '0' :this.mode == '6' ? '0' + '/' + '0':''),
+							this.mode == '4' ? '0' + '/' + '0' : this.mode == '5' ? ("" + this.imageFile + "") + '/' + '0' : this
+							.mode ==
+							'6' ? '0' + '/' + '0' : ''),
 						msg => {
 							this.recvMsg(msg)
 						}, () => {
@@ -388,66 +391,76 @@
 				}
 				if (msg === '[DONE]') {
 					this.loading = false
-				} else if(msg === 'sensitive'){
+				} else if (msg === 'sensitive') {
 					this.putMsgError("请求中出现敏感词，请重新输入")
 					this.loading = false
-				}else{
+				} else {
 					if (this.mode == '1') {
-							try {
-								let msgJson = JSON.parse(msg)
-								if (msgJson.role === 'sqchat') {
-									let content = msgJson.content
-									if (msgJson.codeKey) {
-										content += `[${msgJson.codeKey}]`
-										if (msgJson.codeKey === 'chat.asset_short') {
-											this.openBottomFunc()
-										} else if (msgJson.codeKey.indexOf('chat.asset_') >= 0) {
-											this.chatAsset[this.assetType]++
-										}
+						try {
+							let msgJson = JSON.parse(msg)
+							if (msgJson.role === 'sqchat') {
+								let content = msgJson.content
+								if (msgJson.codeKey) {
+									content += `[${msgJson.codeKey}]`
+									if (msgJson.codeKey === 'chat.asset_short') {
+										this.openBottomFunc()
+									} else if (msgJson.codeKey.indexOf('chat.asset_') >= 0) {
+										this.chatAsset[this.assetType]++
 									}
-									this.putMsgError(content)
 								}
-								if (msgJson.role === 'assistant') {
-									this.putMsg('', false)
-								} else if (msgJson.role == null && msgJson.content) {
-									this.msgList[this.msgList.length - 1].msg += msgJson.content
-									scrollToBottom()
-								}
-							} catch (error) {
-								this.putMsgError(msg)
+								this.putMsgError(content)
 							}
+							if (msgJson.role === 'assistant') {
+								this.putMsg('', false)
+							} else if (msgJson.role == null && msgJson.content) {
+								this.msgList[this.msgList.length - 1].msg += msgJson.content
+								scrollToBottom()
+							}
+						} catch (error) {
+							this.putMsgError(msg)
+						}
 					} else if (this.mode == '2') { // 作图
-							try {
-								let msgJson = JSON.parse(msg)
-								if (msgJson.role === 'assistant') {
-									this.putMsg('', false, 'image')
-								} else if (msgJson.role == null && msgJson.content) {
-									this.msgList[this.msgList.length - 1].msg += msgJson.content
-									scrollToBottom()
-								}
-							} catch (error) {
-								this.putMsgError(msg)
+						try {
+							let msgJson = JSON.parse(msg)
+							if (msgJson.role === 'assistant') {
+								this.putMsg('', false, 'image')
+							} else if (msgJson.role == null && msgJson.content) {
+								this.msgList[this.msgList.length - 1].msg += msgJson.content
+								scrollToBottom()
 							}
+						} catch (error) {
+							this.putMsgError(msg)
+						}
 					} else if (this.mode == '3') { // 视频解析
-							try {
-								let msgJson = JSON.parse(msg)
-								if (msgJson.role === 'assistant') {
-									console.log(msg)
-									this.putMsg('视频文案:' + msgJson.content, false, 'msg') // title
-									this.putMsg('', false, 'video')
-								} else if (msgJson.role == null && msgJson.content) {
-									this.msgList[this.msgList.length - 1].msg += msgJson.content
-									scrollToBottom()
-								}
-							} catch (error) {
-								this.putMsgError(msg)
+						try {
+							let msgJson = JSON.parse(msg)
+							if (msgJson.role === 'assistant') {
+								console.log(msg)
+								this.putMsg('视频文案:' + msgJson.content, false, 'msg') // title
+								this.putMsg('', false, 'video')
+							} else if (msgJson.role == null && msgJson.content) {
+								this.msgList[this.msgList.length - 1].msg += msgJson.content
+								scrollToBottom()
 							}
+						} catch (error) {
+							this.putMsgError(msg)
+						}
 					} else if (this.mode == '4') { // 文字转录
-					
-					}else if (this.mode == '5') { // 证件照换底
-					
-					}else if (this.mode == '6') { // 个性二维码
-					
+
+					} else if (this.mode == '5') { // 证件照换底
+						try {
+							let msgJson = JSON.parse(msg)
+							if (msgJson.role === 'assistant') {
+								this.putMsg('', false, 'image')
+							} else if (msgJson.role == null && msgJson.content) {
+								this.msgList[this.msgList.length - 1].msg += msgJson.content
+								scrollToBottom()
+							}
+						} catch (error) {
+							this.putMsgError(msg)
+						}
+					} else if (this.mode == '6') { // 个性二维码
+
 					}
 					this.loading = false
 				}
@@ -460,15 +473,15 @@
 				this.msgContent += (this.userId + ":" + this.msg + "\n")
 				if (this.mode == '1') {
 					this.putMsg(this.msg, true)
-				} else if(this.mode == '2'){
+				} else if (this.mode == '2') {
 					this.putMsg(this.msg, true, 'image')
-				}else if(this.mode == '3'){
+				} else if (this.mode == '3') {
 					this.putMsg(this.msg, true, 'video')
-				}else if(this.mode == '4'){
+				} else if (this.mode == '4') {
 					// 录音待开发
-				}else if(this.mode == '5'){
+				} else if (this.mode == '5') {
 					// 证件照换底待开发
-				}else if(this.mode == '6'){
+				} else if (this.mode == '6') {
 					// 个性二维码待开发
 				}
 				this.loading = true
@@ -514,6 +527,7 @@
 					date: dateFormat(new Date(), 'yyyy年MM月dd日 hh:mm')
 				}
 				this.msgList.push(item)
+				console.log("开始存入自己发的信息中")
 				scrollToBottom()
 				if (my) {
 					this.addHistory(item)
@@ -529,7 +543,6 @@
 				this.loading = false
 			},
 			addHistory(item) {
-				// if (item.type === 'msg') {
 				let chatHistory = this.$squni.getStorageSync('chatHistory')
 				if (!chatHistory) {
 					chatHistory = []
@@ -539,7 +552,6 @@
 				}
 				chatHistory.push(item)
 				this.$squni.setStorageSync('chatHistory', chatHistory)
-				// }
 			},
 			//心跳检测
 			heartBeatTest() {
@@ -633,15 +645,15 @@
 				this.$refs.popup.close()
 				if (this.mode == '1' && this.sayModeValue == '2') {
 					this.$squni.toast('GPT4.0功能更加丰富~')
-				}else if (this.mode == '2') {
+				} else if (this.mode == '2') {
 					this.$squni.toast('作图功能很强大哦~')
-				}else if (this.mode == '3') {
+				} else if (this.mode == '3') {
 					this.$squni.toast('主流视频平台都可以哦~')
-				}else if(this.mode == '4'){
+				} else if (this.mode == '4') {
 					this.$squni.toast('正在开发中敬请期待～')
-				}else if(this.mode == '5'){
+				} else if (this.mode == '5') {
 					this.$squni.toast('正在开发中敬请期待～')
-				}else if(this.mode == '6'){
+				} else if (this.mode == '6') {
 					this.$squni.toast('正在开发中敬请期待～')
 				}
 			},
@@ -652,7 +664,7 @@
 			},
 			radioGptChange(v) {
 				this.sayModeValue = v.detail.value
-				console.log('this.sayModeValue',this.sayModeValue)
+				console.log('this.sayModeValue', this.sayModeValue)
 			},
 			bindImageSizeChange(e) {
 				this.imageSizeIndex = e.detail.value
@@ -661,130 +673,151 @@
 				this.imageNumIndex = e.detail.value
 			},
 			savePosterPath(url, isVideo) {
-			    uni.downloadFile({
-			        url,
-			        success: (resFile) => {
-			            console.log(resFile, "resFile");
-			            if (resFile.statusCode === 200) {
-			                uni.getSetting({
-			                    success: (res) => {
-			                        if (!res.authSetting["scope.writePhotosAlbum"]) {
-			                            uni.authorize({
-			                                scope: "scope.writePhotosAlbum",
-			                                success: () => {
-			                                    if (isVideo) {
-			                                        uni.saveVideoToPhotosAlbum({
-			                                            filePath: resFile.tempFilePath,
-			                                            success: (res) => {
-			                                                return uni.showToast({
-			                                                    title: "保存成功！",
-			                                                });
-			                                            },
-			                                            fail: (res) => {
-			                                                return uni.showToast({
-			                                                    title: res.errMsg,
-			                                                });
-			                                            },
-			                                            complete: (res) => {},
-			                                        });
-			                                    } else {
-			                                        uni.saveImageToPhotosAlbum({
-			                                            filePath: resFile.tempFilePath,
-			                                            success: (res) => {
-			                                                return uni.showToast({
-			                                                    title: "保存成功！",
-			                                                });
-			                                            },
-			                                            fail: (res) => {
-			                                                return uni.showToast({
-			                                                    title: res.errMsg,
-			                                                });
-			                                            },
-			                                            complete: (res) => {},
-			                                        });
-			                                    }
-			                                },
-			                                fail: () => {
-			                                    uni.showModal({
-			                                        title: "您已拒绝获取相册权限",
-			                                        content: "是否进入权限管理，调整授权？",
-			                                        success: (res) => {
-			                                            if (res.confirm) {
-			                                                uni.openSetting({
-			                                                    success: (res) => {
-			                                                        console.log(res.authSetting);
-			                                                    },
-			                                                });
-			                                            } else if (res.cancel) {
-			                                                return uni.showToast({
-			                                                    title: "已取消！",
-			                                                });
-			                                            }
-			                                        },
-			                                    });
-			                                },
-			                            });
-			                        } else {
-			                            if (isVideo) {
-			                                uni.saveVideoToPhotosAlbum({
-			                                    filePath: resFile.tempFilePath,
-			                                    success: (res) => {
-			                                        return uni.showToast({
-			                                            title: "保存成功！",
-			                                        });
-			                                    },
-			                                    fail: (res) => {
-			                                        return uni.showToast({
-			                                            title: res.errMsg,
-			                                        });
-			                                    },
-			                                    complete: (res) => {},
-			                                });
-			                            } else {
-			                                uni.saveImageToPhotosAlbum({
-			                                    filePath: resFile.tempFilePath,
-			                                    success: (res) => {
-			                                        return uni.showToast({
-			                                            title: "保存成功！",
-			                                        });
-			                                    },
-			                                    fail: (res) => {
-			                                        return uni.showToast({
-			                                            title: res.errMsg,
-			                                        });
-			                                    },
-			                                    complete: (res) => {},
-			                                });
-			                            }
-			                        }
-			                    },
-			                    fail: (res) => {},
-			                });
-			            } else {
-			                return uni.showToast({
-			                    title: resFile.errMsg,
-			                });
-			            }
-			        },
-			        fail: (res) => {
-			            return uni.showToast({
-			                title: res.errMsg,
-			            });
-			        },
-			    });
+				uni.downloadFile({
+					url,
+					success: (resFile) => {
+						console.log(resFile, "resFile");
+						if (resFile.statusCode === 200) {
+							uni.getSetting({
+								success: (res) => {
+									if (!res.authSetting["scope.writePhotosAlbum"]) {
+										uni.authorize({
+											scope: "scope.writePhotosAlbum",
+											success: () => {
+												if (isVideo) {
+													uni.saveVideoToPhotosAlbum({
+														filePath: resFile
+															.tempFilePath,
+														success: (res) => {
+															return uni
+																.showToast({
+																	title: "保存成功！",
+																});
+														},
+														fail: (res) => {
+															return uni
+																.showToast({
+																	title: res
+																		.errMsg,
+																});
+														},
+														complete: (res) => {},
+													});
+												} else {
+													uni.saveImageToPhotosAlbum({
+														filePath: resFile
+															.tempFilePath,
+														success: (res) => {
+															return uni
+																.showToast({
+																	title: "保存成功！",
+																});
+														},
+														fail: (res) => {
+															return uni
+																.showToast({
+																	title: res
+																		.errMsg,
+																});
+														},
+														complete: (res) => {},
+													});
+												}
+											},
+											fail: () => {
+												uni.showModal({
+													title: "您已拒绝获取相册权限",
+													content: "是否进入权限管理，调整授权？",
+													success: (res) => {
+														if (res.confirm) {
+															uni.openSetting({
+																success: (
+																	res
+																) => {
+																	console
+																		.log(
+																			res
+																			.authSetting
+																		);
+																},
+															});
+														} else if (res
+															.cancel) {
+															return uni
+																.showToast({
+																	title: "已取消！",
+																});
+														}
+													},
+												});
+											},
+										});
+									} else {
+										if (isVideo) {
+											uni.saveVideoToPhotosAlbum({
+												filePath: resFile.tempFilePath,
+												success: (res) => {
+													return uni.showToast({
+														title: "保存成功！",
+													});
+												},
+												fail: (res) => {
+													return uni.showToast({
+														title: res.errMsg,
+													});
+												},
+												complete: (res) => {},
+											});
+										} else {
+											uni.saveImageToPhotosAlbum({
+												filePath: resFile.tempFilePath,
+												success: (res) => {
+													return uni.showToast({
+														title: "保存成功！",
+													});
+												},
+												fail: (res) => {
+													return uni.showToast({
+														title: res.errMsg,
+													});
+												},
+												complete: (res) => {},
+											});
+										}
+									}
+								},
+								fail: (res) => {},
+							});
+						} else {
+							return uni.showToast({
+								title: resFile.errMsg,
+							});
+						}
+					},
+					fail: (res) => {
+						return uni.showToast({
+							title: res.errMsg,
+						});
+					},
+				});
 			},
 			selectPicture() {
-				console.log("开始调用oss")
 				uni.chooseImage({
 					success: (chooseImageRes) => {
 						const tempFilePaths = chooseImageRes.tempFilePaths;
 						console.log(tempFilePaths)
 						uni.uploadFile({
-							url: baseUrl + "/oss/uploadOssFile", //仅为示例，非真实的接口地址
+							url: baseUrl.baseUrl + "/oss/uploadOssFile",
 							filePath: tempFilePaths[0],
 							name: 'file',
 							success: (uploadFileRes) => {
+								this.imageFile = uploadFileRes.data
 								console.log(uploadFileRes.data);
+								// 上传成功后向请求信息中插入一条数据
+								this.putMsg(uploadFileRes.data, true, 'image');
+							},
+							fail: (error) => {
+								console.error("上传失败", error);
 							}
 						});
 					}
@@ -966,115 +999,115 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
-	
+
 	.material-box {
-				width: 686rpx;
-				padding: 32rpx;
-				background: #fff;
-				margin-top: 24rpx;
-				margin-left: 32rpx;
-				padding-bottom: 32rpx;
-				border-radius: 8rpx;
-	
-				.item-top {
-					height: 50rpx;
-					line-height: 50rpx;
-					font-size: 36rpx;
-					font-weight: 500;
-					color: #333;
-				}
-	
-				.material-item {
-					width: 622rpx;
-					border-radius: 8rpx;
-					background: #f8f8f8;
-					padding: 16rpx;
-					margin-top: 24rpx;
-	
-					.item-list {
-						font-size: 28rpx;
-						font-weight: 400;
-						line-height: 56rpx;
-						height: 56rpx;
+		width: 686rpx;
+		padding: 32rpx;
+		background: #fff;
+		margin-top: 24rpx;
+		margin-left: 32rpx;
+		padding-bottom: 32rpx;
+		border-radius: 8rpx;
+
+		.item-top {
+			height: 50rpx;
+			line-height: 50rpx;
+			font-size: 36rpx;
+			font-weight: 500;
+			color: #333;
+		}
+
+		.material-item {
+			width: 622rpx;
+			border-radius: 8rpx;
+			background: #f8f8f8;
+			padding: 16rpx;
+			margin-top: 24rpx;
+
+			.item-list {
+				font-size: 28rpx;
+				font-weight: 400;
+				line-height: 56rpx;
+				height: 56rpx;
+				color: #B99C65;
+			}
+		}
+
+		.material-select {
+			display: flex;
+			flex-wrap: wrap;
+			margin-top: 24rpx;
+
+			.material-png {
+				width: 191rpx;
+				height: 191rpx;
+				border-radius: 12rpx;
+				border: 2rpx dashed #B99C65;
+				margin-right: 8rpx;
+				margin-left: 8rpx;
+				margin-bottom: 16rpx;
+				position: relative;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				flex-direction: column;
+				background: #F8F8F8;
+
+				.material-sent {
+					width: 189rpx;
+					height: 189rpx;
+					background: rgba(245, 245, 245, 0.5);
+					position: absolute;
+					display: flex;
+					justify-content: center;
+					align-items: center;
+					flex-direction: column;
+
+					.select-tips {
+						width: 130rpx;
+						height: 10rpx;
+						margin-bottom: 12rpx;
+					}
+
+					.tips-text {
+						font-size: 24rpx;
 						color: #B99C65;
 					}
 				}
-	
-				.material-select {
-					display: flex;
-					flex-wrap: wrap;
-					margin-top: 24rpx;
-	
-					.material-png {
-						width: 191rpx;
-						height: 191rpx;
-						border-radius: 12rpx;
-						border: 2rpx dashed #B99C65;
-						margin-right: 8rpx;
-						margin-left: 8rpx;
-						margin-bottom: 16rpx;
-						position: relative;
-						display: flex;
-						align-items: center;
-						justify-content: center;
-						flex-direction: column;
-						background: #F8F8F8;
-	
-						.material-sent {
-							width: 189rpx;
-							height: 189rpx;
-							background: rgba(245, 245, 245, 0.5);
-							position: absolute;
-							display: flex;
-							justify-content: center;
-							align-items: center;
-							flex-direction: column;
-	
-							.select-tips {
-								width: 130rpx;
-								height: 10rpx;
-								margin-bottom: 12rpx;
-							}
-	
-							.tips-text {
-								font-size: 24rpx;
-								color: #B99C65;
-							}
-						}
-	
-						.close-png {
-							position: absolute;
-							top: 6rpx;
-							right: 6rpx;
-							width: 40rpx;
-							height: 40rpx;
-						}
-	
-						.selected-png {
-							width: 180rpx;
-							height: 180rpx;
-							border-radius: 12rpx;
-						}
-	
-						.selected-name {
-							width: 180rpx;
-							word-break: break-all;
-							overflow: hidden;
-						}
-	
-						.picture-png {
-							width: 40rpx;
-							height: 32rpx;
-							margin-bottom: 8rpx;
-						}
-	
-						.picture-text {
-							font-size: 28rpx;
-							height: 40rpx;
-							line-height: 40rpx;
-							color: #B99C65;
-						}
-					}
+
+				.close-png {
+					position: absolute;
+					top: 6rpx;
+					right: 6rpx;
+					width: 40rpx;
+					height: 40rpx;
 				}
-			}	
+
+				.selected-png {
+					width: 180rpx;
+					height: 180rpx;
+					border-radius: 12rpx;
+				}
+
+				.selected-name {
+					width: 180rpx;
+					word-break: break-all;
+					overflow: hidden;
+				}
+
+				.picture-png {
+					width: 40rpx;
+					height: 32rpx;
+					margin-bottom: 8rpx;
+				}
+
+				.picture-text {
+					font-size: 28rpx;
+					height: 40rpx;
+					line-height: 40rpx;
+					color: #B99C65;
+				}
+			}
+		}
+	}
 </style>
