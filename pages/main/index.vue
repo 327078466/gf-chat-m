@@ -1,7 +1,7 @@
 <template>
 	<!-- 跳过审核 用于专门给审核人员看 -->
 	<view>
-		<view v-if="isDevelop">
+		<view v-if="!isDevelop">
 			<view class="login-content">
 				<view class="login-title">
 					文件查询
@@ -22,7 +22,7 @@
 				<button class="mybutton" @click="showMessage">点击我</button>
 			</view>
 		</view>
-		<view v-if="!isDevelop">
+		<view v-if="isDevelop">
 			<cu-custom bgColor="bg-cyan" :isBack="false">
 				<!-- 	<block slot="backText">返回</block> -->
 				<block slot="content">GF聊天</block>
@@ -101,9 +101,9 @@
 					<input v-model="msg" class="solid padding-lr" :adjust-position="false" :focus="false"
 						maxlength="1000" cursor-spacing="10" :placeholder="loading ? '正在思考中，请稍后~' : inputMessage"
 						@focus="inputFocus" @blur="inputBlur" @confirm="sendMsg"></input>
-					<!-- <view class="action">
-							<text class="cuIcon-emojifill text-grey"></text>
-						</view> -->
+						<view class="action" v-if="(mode =='5' || mode == '6') && selectimageIsShow">
+							<text class="cuIcon-upload text-grey" @click="selectPicture"></text>
+						</view>
 					<button class="cu-btn bg-cyan shadow" :disabled="loading" @click="sendMsg">
 						<text class="cuIcon-loading2 cuIconfont-spin"
 							v-if="loading || !ready"></text>{{ !ready ? '连接中' : '发送' }}
@@ -115,27 +115,37 @@
 			<uni-popup ref="popup" type="center">
 				<uni-popup-dialog mode="base" title="请选择需要的模式哦～" :duration="2000" :before-close="true" @close="close"
 					@confirm="confirm(mode)">
-					<view style="background-color: #fff;padding: 15px;" class="box">
-						<radio-group @change="radioChange" style="padding-bottom: 25px;">
-							<view style="display: flex;flex-direction: row;gap: 30px;">
-								<view>
-									<view style="display: flex;gap: 10px;padding-bottom: 15px;">
+					<view style="background-color: #fff;" class="box">
+						<radio-group @change="radioChange">
+							<view style="display: flex;flex-direction: column;">
+								<view style="display: flex;flex-direction: row;gap: 36px;">
+									<view style="display: flex;gap: 20px;padding-bottom: 15px;">
 										<text>AI聊天</text>
 										<radio :value="1" :checked="mode=='1'"></radio>
 									</view>
-									<view style="display: flex;gap: 10px;">
+									<view style="display: flex;gap: 10px;padding-bottom: 15px;">
 										<text>AI绘画</text>
 										<radio :value="2" :checked="mode=='2'"></radio>
 									</view>
 								</view>
-								<view>
-									<view style="display: flex;gap: 10px;padding-bottom: 15px;">
+								<view style="display: flex;flex-direction: row;gap: 20px;">
+									<view style="display: flex;gap: 5px;padding-bottom: 15px;">
 										<text>视频解析</text>
 										<radio :value="3" :checked="mode=='3'"></radio>
 									</view>
-									<view style="display: flex;gap: 10px;">
+									<view style="display: flex;gap: 10px;padding-bottom: 15px;">
 										<text>文字转录</text>
 										<radio :value="4" :checked="mode=='4'"></radio>
+									</view>
+								</view>
+								<view style="display: flex;flex-direction: row;gap: 6px;">
+									<view style="display: flex;gap: 20px;padding-bottom: 15px;">
+										<text>证件照</text>
+										<radio :value="5" :checked="mode=='5'"></radio>
+									</view>
+									<view style="display: flex;gap: 10px;padding-bottom: 15px;">
+										<text>个性二维码</text>
+										<radio :value="6" :checked="mode=='6'"></radio>
 									</view>
 								</view>
 							</view>
@@ -194,9 +204,11 @@
 	import websocket from '@/util/websocket'
 	import {
 		sendMsgApi,
-		getUserChatAssetApi
+		getUserChatAssetApi,
+		uploadOssFile,
 	} from '@/api/chat.js'
 	import BottomFunc from './bottom-func'
+	import baseUrl  from  '@/common/config.js'
 	const HELLO_MSG = {
 		type: 'msg',
 		my: false,
@@ -233,6 +245,10 @@
 				imageSize: ['256*256', '512*512', '1024*1024'],
 				imageSizeIndex: 0,
 				imageNumIndex: 0,
+				imageList: [], // 反显图片集合
+				cusNo: '', // 客户号
+				selectimageIsShow: true, // 添加图片功能按钮默认显示
+				accessToken: '',
 			}
 		},
 		computed: {
@@ -277,6 +293,7 @@
 			getUserChatAssetApi().then(res => {
 				this.chatAsset = res.data
 			})
+			console.log("开始链接")
 			this.connectWebsocket();
 		},
 		onHide() {
@@ -298,7 +315,7 @@
 					this.$squni.toast('请先输入您的问题哦')
 					return
 				}
-				if(this.mode == '4'){
+				if(this.mode == '4' || this.mode == '5'|| this.mode == '6'){
 					this.$squni.toast('正在开发中敬请期待～')
 					return
 				}
@@ -333,6 +350,12 @@
 				} else if (this.mode == '4') {
 					HELLO_MSG.msg = '我是您的文字转录助手,编辑好的文案发我哦，让我来给您朗读～'
 					this.inputMessage = '告诉我您的文章哦～'
+				}else if (this.mode == '5') {
+					HELLO_MSG.msg = '我是您的证件照转化助手，可以将您的证件照快速换底色哦～'
+					this.inputMessage = '告诉我您需要怎样转换呢～'
+				}else if (this.mode == '6') {
+					HELLO_MSG.msg = '我是您的个性二维码助手，我可以将您需要整合的图片和二维码融合成个性二维码哦～'
+					this.inputMessage = '告诉我您需要怎么融合呢～'
 				}
 				if (this.mode == '1' && this.assistantDetail.id != '0') {
 					HELLO_MSG.msg = '我是您的聊天助手,可以帮您解答疑难困惑' + '[提示词:' + this.assistantDetail.name + ']'
@@ -346,7 +369,7 @@
 							this.mode == '2' ? this.imageNum[this.imageNumIndex] + '/' + this.imageSize[this
 								.imageSizeIndex] :
 							this.mode == '3' ? '0' + '/' + '0' :
-							this.mode == '4' ? '0' + '/' + '0' : ''),
+							this.mode == '4' ? '0' + '/' + '0' : this.mode == '5' ? '0' + '/' + '0' :this.mode == '6' ? '0' + '/' + '0':''),
 						msg => {
 							this.recvMsg(msg)
 						}, () => {
@@ -421,6 +444,10 @@
 							}
 					} else if (this.mode == '4') { // 文字转录
 					
+					}else if (this.mode == '5') { // 证件照换底
+					
+					}else if (this.mode == '6') { // 个性二维码
+					
 					}
 					this.loading = false
 				}
@@ -439,6 +466,10 @@
 					this.putMsg(this.msg, true, 'video')
 				}else if(this.mode == '4'){
 					// 录音待开发
+				}else if(this.mode == '5'){
+					// 证件照换底待开发
+				}else if(this.mode == '6'){
+					// 个性二维码待开发
 				}
 				this.loading = true
 
@@ -608,6 +639,10 @@
 					this.$squni.toast('主流视频平台都可以哦~')
 				}else if(this.mode == '4'){
 					this.$squni.toast('正在开发中敬请期待～')
+				}else if(this.mode == '5'){
+					this.$squni.toast('正在开发中敬请期待～')
+				}else if(this.mode == '6'){
+					this.$squni.toast('正在开发中敬请期待～')
 				}
 			},
 			radioChange(v) {
@@ -738,11 +773,28 @@
 			        },
 			    });
 			},
+			selectPicture() {
+				console.log("开始调用oss")
+				uni.chooseImage({
+					success: (chooseImageRes) => {
+						const tempFilePaths = chooseImageRes.tempFilePaths;
+						console.log(tempFilePaths)
+						uni.uploadFile({
+							url: baseUrl + "/oss/uploadOssFile", //仅为示例，非真实的接口地址
+							filePath: tempFilePaths[0],
+							name: 'file',
+							success: (uploadFileRes) => {
+								console.log(uploadFileRes.data);
+							}
+						});
+					}
+				});
+			}
 		}
 	}
 </script>
 
-<style>
+<style lang="scss">
 	.cu-chat .cu-item>.main .content::after {
 		z-index: 1;
 	}
@@ -888,7 +940,7 @@
 	}
 
 	.box2 {
-		padding: 30rpx;
+		padding: 20rpx;
 		display: flex;
 		gap: 45px;
 	}
@@ -914,4 +966,115 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
+	
+	.material-box {
+				width: 686rpx;
+				padding: 32rpx;
+				background: #fff;
+				margin-top: 24rpx;
+				margin-left: 32rpx;
+				padding-bottom: 32rpx;
+				border-radius: 8rpx;
+	
+				.item-top {
+					height: 50rpx;
+					line-height: 50rpx;
+					font-size: 36rpx;
+					font-weight: 500;
+					color: #333;
+				}
+	
+				.material-item {
+					width: 622rpx;
+					border-radius: 8rpx;
+					background: #f8f8f8;
+					padding: 16rpx;
+					margin-top: 24rpx;
+	
+					.item-list {
+						font-size: 28rpx;
+						font-weight: 400;
+						line-height: 56rpx;
+						height: 56rpx;
+						color: #B99C65;
+					}
+				}
+	
+				.material-select {
+					display: flex;
+					flex-wrap: wrap;
+					margin-top: 24rpx;
+	
+					.material-png {
+						width: 191rpx;
+						height: 191rpx;
+						border-radius: 12rpx;
+						border: 2rpx dashed #B99C65;
+						margin-right: 8rpx;
+						margin-left: 8rpx;
+						margin-bottom: 16rpx;
+						position: relative;
+						display: flex;
+						align-items: center;
+						justify-content: center;
+						flex-direction: column;
+						background: #F8F8F8;
+	
+						.material-sent {
+							width: 189rpx;
+							height: 189rpx;
+							background: rgba(245, 245, 245, 0.5);
+							position: absolute;
+							display: flex;
+							justify-content: center;
+							align-items: center;
+							flex-direction: column;
+	
+							.select-tips {
+								width: 130rpx;
+								height: 10rpx;
+								margin-bottom: 12rpx;
+							}
+	
+							.tips-text {
+								font-size: 24rpx;
+								color: #B99C65;
+							}
+						}
+	
+						.close-png {
+							position: absolute;
+							top: 6rpx;
+							right: 6rpx;
+							width: 40rpx;
+							height: 40rpx;
+						}
+	
+						.selected-png {
+							width: 180rpx;
+							height: 180rpx;
+							border-radius: 12rpx;
+						}
+	
+						.selected-name {
+							width: 180rpx;
+							word-break: break-all;
+							overflow: hidden;
+						}
+	
+						.picture-png {
+							width: 40rpx;
+							height: 32rpx;
+							margin-bottom: 8rpx;
+						}
+	
+						.picture-text {
+							font-size: 28rpx;
+							height: 40rpx;
+							line-height: 40rpx;
+							color: #B99C65;
+						}
+					}
+				}
+			}	
 </style>

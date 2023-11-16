@@ -1,6 +1,6 @@
 <template>
 	<view>
-		<view v-if="isDevelop">
+		<view v-if="!isDevelop">
 			<view class="login-content">
 				<view class="login-title">
 					文件查询
@@ -9,7 +9,6 @@
 					<input type="text" placeholder="输入文件名" />
 					<uni-icons type="closeempty" color="#808080" size="25"></uni-icons>
 				</view>
-		
 				<view class="password">
 					<input placeholder="请输入文件路径" />
 					<uni-icons type="eye-filled" color="#808080" size="25"></uni-icons>
@@ -21,7 +20,7 @@
 				<button class="mybutton" @click="showMessage">点击我</button>
 			</view>
 		</view>
-		<view v-if="!isDevelop">
+		<view v-if="isDevelop">
 			<cu-custom bgColor="bg-cyan" :isBack="true">
 				<block slot="backText">返回</block>
 				<block slot="content">角色列表</block>

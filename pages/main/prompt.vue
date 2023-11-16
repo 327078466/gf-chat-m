@@ -1,6 +1,6 @@
 <template>
 	<view>
-		<view v-if="isDevelop">
+		<view v-if="!isDevelop">
 			<view class="login-content">
 				<view class="login-title">
 					文件查询
@@ -21,7 +21,7 @@
 				<button class="mybutton" @click="showMessage">点击我</button>
 			</view>
 		</view>
-		<view v-if="!isDevelop" >
+		<view v-if="isDevelop" >
 			<cu-custom bgColor="bg-cyan" :isBack="true">
 				<block slot="backText">返回</block>
 				<block slot="content">提示词分类</block>
@@ -207,7 +207,6 @@
 					this.getScrollW(); // 获取元素位置信息
 				});
 				this.itemList = this.category[this.isActive].itemList
-				
 			});
 			var that = this;
 			//获取手机屏幕的高度，让其等于swiper的高度，从而使屏幕充满

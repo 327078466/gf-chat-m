@@ -14,14 +14,18 @@ export const post = (url, params, config) =>
 		method: 'POST'
 	}, config))
 
-const ajax = (url, params, config) => {
+export const postFile = (url, params, config,contentType = 'multipart/form-data') =>
+	ajax(url, params, Object.assign({
+		method: 'POST'
+	}, config,contentType))
+const ajax = (url, params, config,contentType = 'application/json') => {
 	const accessToken = squni.getStorageSync('token')
 	return new Promise((resolve, reject) => {
 		uni.request({
 			method: config.method,
 			url: (config.baseUrl || gloablConfig.baseUrl) + url,
 			header: Object.assign({
-				'Content-Type': 'application/json',
+				'Content-Type': contentType,
 				[gloablConfig.Authorization]: accessToken || ''
 			}, config.header),
 			data: params,

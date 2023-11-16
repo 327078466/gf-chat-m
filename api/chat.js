@@ -1,4 +1,4 @@
-import { get, post } from '@/util/request.js'
+import { get, post,postFile } from '@/util/request.js'
 
 // AI聊天(弃用)
 export const sendMsgApi = (params, config = {}) => post('/tools/chat/sendMsg', params, config)
@@ -24,5 +24,8 @@ export const getPromptType = (params, config = {}) => post('/prompt/type/getProm
 
 // 根据id 查询所属分类下的列表
 export const getPromptById = (params, config = {}) => post('/prompt/type/getPromptById', params, config)
+
+// 上传文件oss
+export const uploadOssFile = (params, config = {}) => postFile('/oss/uploadOssFile', params, config)
 
 
