@@ -251,7 +251,7 @@
 				imageSize: ['256*256', '512*512', '1024*1024'],
 				imageSizeIndex: 0,
 				imageNumIndex: 0,
-				imageFile: '0',
+				imageFile: 'https://gf-chat.oss-cn-beijing.aliyuncs.com/2023/11/17/c8275308fa434374b01cf11ab4eceb93MxpbJhNOQ170904454f83edc1299fbcb1104be910e98.jpg',
 			}
 		},
 		computed: {
@@ -312,6 +312,7 @@
 
 		methods: {
 			sendMsg() {
+				console.log("当前模式是",this.mode)
 				if (this.msg == "") {
 					this.$squni.toast('请先输入您的问题哦')
 					return
@@ -320,7 +321,16 @@
 					this.$squni.toast('正在开发中敬请期待～')
 					return
 				}
+				if(this.mode == '5'){
+					if(this.imageFile == '0'){
+						this.loading = false
+						this.$squni.toast('请先上传图片哦～')
+						return
+					}
+					this.msg = this.msg + '----' + this.imageFile
+				}
 				let msg = this.msg
+				
 				this.putMsg(this.msg, true)
 				this.msgLoading = true
 				this.loading = true
@@ -333,6 +343,7 @@
 					this.loading = false
 					return
 				}
+				
 				// 发送消息
 				websocket.sendMessage(msg, null, () => {
 					this.putMsgError('机器人被拔网线了，请稍后再试~')
@@ -370,7 +381,7 @@
 							this.mode == '2' ? this.imageNum[this.imageNumIndex] + '/' + this.imageSize[this
 								.imageSizeIndex] :
 							this.mode == '3' ? '0' + '/' + '0' :
-							this.mode == '4' ? '0' + '/' + '0' : this.mode == '5' ? ("" + this.imageFile + "") + '/' + '0' : this
+							this.mode == '4' ? '0' + '/' + '0' : this.mode == '5' ? '0' + '/' + '0' : this
 							.mode ==
 							'6' ? '0' + '/' + '0' : ''),
 						msg => {
@@ -406,6 +417,8 @@
 										this.openBottomFunc()
 									} else if (msgJson.codeKey.indexOf('chat.asset_') >= 0) {
 										this.chatAsset[this.assetType]++
+									}else if(msgJson.codeKey.indexOf('chat.ws_error') >= 0){
+										
 									}
 								}
 								this.putMsgError(content)
@@ -422,6 +435,20 @@
 					} else if (this.mode == '2') { // 作图
 						try {
 							let msgJson = JSON.parse(msg)
+							if (msgJson.role === 'sqchat') {
+								let content = msgJson.content
+								if (msgJson.codeKey) {
+									content += `[${msgJson.codeKey}]`
+									if (msgJson.codeKey === 'chat.asset_short') {
+										this.openBottomFunc()
+									} else if (msgJson.codeKey.indexOf('chat.asset_') >= 0) {
+										this.chatAsset[this.assetType]++
+									}else if(msgJson.codeKey.indexOf('chat.ws_error') >= 0){
+										
+									}
+								}
+								this.putMsgError(content)
+							}
 							if (msgJson.role === 'assistant') {
 								this.putMsg('', false, 'image')
 							} else if (msgJson.role == null && msgJson.content) {
@@ -434,6 +461,20 @@
 					} else if (this.mode == '3') { // 视频解析
 						try {
 							let msgJson = JSON.parse(msg)
+							if (msgJson.role === 'sqchat') {
+								let content = msgJson.content
+								if (msgJson.codeKey) {
+									content += `[${msgJson.codeKey}]`
+									if (msgJson.codeKey === 'chat.asset_short') {
+										this.openBottomFunc()
+									} else if (msgJson.codeKey.indexOf('chat.asset_') >= 0) {
+										this.chatAsset[this.assetType]++
+									}else if(msgJson.codeKey.indexOf('chat.ws_error') >= 0){
+										
+									}
+								}
+								this.putMsgError(content)
+							}
 							if (msgJson.role === 'assistant') {
 								console.log(msg)
 								this.putMsg('视频文案:' + msgJson.content, false, 'msg') // title
@@ -450,6 +491,20 @@
 					} else if (this.mode == '5') { // 证件照换底
 						try {
 							let msgJson = JSON.parse(msg)
+							if (msgJson.role === 'sqchat') {
+								let content = msgJson.content
+								if (msgJson.codeKey) {
+									content += `[${msgJson.codeKey}]`
+									if (msgJson.codeKey === 'chat.asset_short') {
+										this.openBottomFunc()
+									} else if (msgJson.codeKey.indexOf('chat.asset_') >= 0) {
+										this.chatAsset[this.assetType]++
+									}else if(msgJson.codeKey.indexOf('chat.ws_error') >= 0){
+										
+									}
+								}
+								this.putMsgError(content)
+							}
 							if (msgJson.role === 'assistant') {
 								this.putMsg('', false, 'image')
 							} else if (msgJson.role == null && msgJson.content) {
@@ -480,6 +535,7 @@
 				} else if (this.mode == '4') {
 					// 录音待开发
 				} else if (this.mode == '5') {
+					this.putMsg(this.msg, true, 'image')
 					// 证件照换底待开发
 				} else if (this.mode == '6') {
 					// 个性二维码待开发
@@ -652,7 +708,7 @@
 				} else if (this.mode == '4') {
 					this.$squni.toast('正在开发中敬请期待～')
 				} else if (this.mode == '5') {
-					this.$squni.toast('正在开发中敬请期待～')
+					this.$squni.toast('请上传比较规整的照片哦～')
 				} else if (this.mode == '6') {
 					this.$squni.toast('正在开发中敬请期待～')
 				}

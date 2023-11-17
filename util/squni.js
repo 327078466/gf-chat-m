@@ -127,7 +127,8 @@ export const scrollToBottom = () => {
 	setTimeout(() => {
 		uni.pageScrollTo({
 			scrollTop: 999999,
-			duration: 0
+			duration: 0,
+			
 		});
 	}, 50);
 }
